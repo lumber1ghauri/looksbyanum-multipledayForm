@@ -247,6 +247,30 @@ export default function MultiDaySelection({ register, setValue, watch, errors, o
         {errors.total_days && (
           <p className="text-sm text-red-600">{errors.total_days.message}</p>
         )}
+
+        {/* Navigation Buttons */}
+        <div className="flex justify-between items-center pt-6 border-t border-gray-200">
+          <button
+            type="button"
+            onClick={onBack}
+            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors duration-200"
+          >
+            ← Back
+          </button>
+          
+          <button
+            type="button"
+            onClick={onNext}
+            disabled={!selectedMode}
+            className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
+              selectedMode
+                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-lg hover:scale-[1.02]'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            Continue to {selectedMode === 'multi' ? `Day 1 Configuration` : 'Event Details'} →
+          </button>
+        </div>
       </div>
     </StepLayout>
   );

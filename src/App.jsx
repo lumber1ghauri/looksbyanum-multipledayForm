@@ -462,34 +462,57 @@ export default function App() {
       return "Region";
     }
     if (step === 3) return "Service Type";
-    if (step === 4) return "Service Details";
+    if (step === 4) return isMultiDay ? `Multi-Day Selection (Day ${currentDayIndex + 1}/${totalDays})` : "Multi-Day Selection";
 
-    // Service-specific steps
-    if (serviceType === "Bridal") {
-      if (step === 5) return "Bridal Service Details";
-      if (step === 6) return "Additional Services";
-      if (step === 7) return "Bridal Party";
-      if (step === 8) return "Contact Information";
-      // Steps 9-11 hidden for Bridal
-    } else if (serviceType === "Semi-Bridal") {
-      if (step === 5) return "Semi Bridal Service Details";
-      if (step === 6) return "Additional Services";
-      if (step === 7) return "Bridal Party Services";
-      if (step === 8) return "Contact Information";
-      // Steps 9-11 hidden for Semi-Bridal
-    } else if (serviceType === "Non-Bridal") {
-      if (step === 5) return "How many people need my service?";
-      if (step === 6) return "Service Details";
-      if (step === 7) return "Contact Information";
+    // Multi-day flow step names
+    if (isMultiDay && step >= 5) {
+      const baseSteps = 4;
+      const relativeStep = step - baseSteps - 1;
+      const stepsPerDay = 3;
+      const dayNumber = Math.floor(relativeStep / stepsPerDay);
+      const subStep = relativeStep % stepsPerDay;
+      
+      if (dayNumber < totalDays) {
+        const dayName = daysData[dayNumber]?.event_name || `Day ${dayNumber + 1}`;
+        if (subStep === 0) return `${dayName} - Date & Time`;
+        if (subStep === 1) return `${dayName} - Service Selection`;
+        if (subStep === 2) return `${dayName} - Party & Add-ons`;
+      }
+      
+      // After all days
+      const contactStep = baseSteps + (totalDays * stepsPerDay) + 1;
+      if (step === contactStep) return "Contact Information";
+      if (step === contactStep + 1) return "Quote Review";
+      if (step === contactStep + 2) return "Payment";
     }
 
-    // Post-booking flow steps (applies to all service types)
-    if (step === 12) return "Quote Review";
-    if (step === 13) return "Select Your Artist";
-    if (step === 14) return "Choose Date & Time";
-    if (step === 15) return "Service Address";
-    if (step === 16) return "Review Contract";
-    if (step === 17) return "Payment";
+    // Single-day service-specific steps (step numbers now +1 due to new step 4)
+    if (!isMultiDay) {
+      if (serviceType === "Bridal") {
+        if (step === 5) return "Event Details";
+        if (step === 6) return "Bridal Service Details";
+        if (step === 7) return "Additional Services";
+        if (step === 8) return "Bridal Party";
+        if (step === 9) return "Contact Information";
+      } else if (serviceType === "Semi-Bridal") {
+        if (step === 6) return "Semi Bridal Service Details";
+        if (step === 7) return "Additional Services";
+        if (step === 8) return "Bridal Party Services";
+        if (step === 9) return "Contact Information";
+      } else if (serviceType === "Non-Bridal") {
+        if (step === 6) return "How many people need my service?";
+        if (step === 7) return "Service Details";
+        if (step === 8) return "Contact Information";
+      }
+
+      // Post-booking flow steps (applies to all service types)
+      if (step === 13) return "Quote Review";
+      if (step === 14) return "Select Your Artist";
+      if (step === 15) return "Choose Date & Time";
+      if (step === 16) return "Service Address";
+      if (step === 17) return "Review Contract";
+      if (step === 18) return "Payment";
+    }
 
     // Destination Wedding flow
     if (region === "Destination Wedding") {
@@ -529,16 +552,16 @@ export default function App() {
       return baseSteps + daysConfigSteps + finalSteps;
     }
 
-    // SINGLE-DAY BOOKING (original logic)
+    // SINGLE-DAY BOOKING (original logic) - Updated for new step 4
     if (serviceType === "Non-Bridal") {
-      return 8; // Non-Bridal flow: steps 1-8 (service mode + 7 existing steps including payment)
+      return 9; // Non-Bridal flow: steps 1-9 (+1 for multi-day selection step)
     } else if (serviceType === "Bridal") {
-      return 8; // Bridal flow: steps 1-8 (service mode + 7 existing steps, stops at contact info)
+      return 9; // Bridal flow: steps 1-9 (+1 for multi-day selection step)
     } else if (serviceType === "Semi-Bridal") {
-      return 8; // Semi-Bridal flow: steps 1-8 (service mode + 7 existing steps, stops at contact info)
+      return 9; // Semi-Bridal flow: steps 1-9 (+1 for multi-day selection step)
     }
 
-    return 8; // Default fallback
+    return 9; // Default fallback (+1 for multi-day selection step)
   };
 
   const onNext = async () => {
@@ -1070,7 +1093,30 @@ export default function App() {
               getTotalSteps={getTotalSteps}
               getStepTitle={getStepTitle}
               isEditMode={isEditMode}
+              isMultiDay={isMultiDay}
+              currentDayIndex={currentDayIndex}
+              totalDays={totalDays}
+              daysData={daysData}
             />
+
+            {/* Day Navigator for Multi-Day Bookings */}
+            {isMultiDay && totalDays > 1 && (
+              <div className="mb-6">
+                <DayNavigator
+                  daysData={daysData}
+                  totalDays={totalDays}
+                  currentDayIndex={currentDayIndex}
+                  onDayClick={(dayIndex) => {
+                    // Navigate to the day's first step
+                    const baseSteps = 4;
+                    const stepsPerDay = 3;
+                    const targetStep = baseSteps + 1 + (dayIndex * stepsPerDay);
+                    setStep(targetStep);
+                    setCurrentDayIndex(dayIndex);
+                  }}
+                />
+              </div>
+            )}
 
             {/* Edit Button */}
             
@@ -1179,6 +1225,18 @@ export default function App() {
                 )}
 
                 {step === 4 && (
+                  <MultiDaySelection
+                    onNext={onNext}
+                    onBack={onPrev}
+                    register={register}
+                    setValue={setValue}
+                    getValues={getValues}
+                    watch={watch}
+                    errors={errors}
+                  />
+                )}
+
+                {step === 5 && !isMultiDay && (
                   <EventDetailsStep
                     onNext={onNext}
                     onBack={onPrev}
@@ -1196,7 +1254,7 @@ export default function App() {
                     getValues("service_mode") === "Mobile Makeup Artist") ||
                     getValues("service_mode") === "Studio Service") && (
                     <>
-                      {step === 5 && (
+                      {step === 6 && !isMultiDay && (
                         <BrideServiceSelection
                           onNext={onNext}
                           onBack={onPrev}
@@ -1207,7 +1265,7 @@ export default function App() {
                         />
                       )}
 
-                      {step === 6 && (
+                      {step === 7 && !isMultiDay && (
                         <BrideAddons
                           onNext={onNext}
                           onBack={onPrev}
@@ -1218,7 +1276,7 @@ export default function App() {
                         />
                       )}
 
-                      {step === 7 && (
+                      {step === 8 && !isMultiDay && (
                         <BridalParty
                           onNext={onNext}
                           onBack={onPrev}
@@ -1229,7 +1287,7 @@ export default function App() {
                         />
                       )}
 
-                      {step === 8 && (
+                      {step === 9 && !isMultiDay && (
                         <ClientDetails
                           onNext={onNext}
                           onBack={onPrev}
@@ -1250,7 +1308,7 @@ export default function App() {
                 {getValues("service_type") === "Semi-Bridal" &&
                   getValues("region") !== "Destination Wedding" && (
                     <>
-                      {step === 5 && (
+                      {step === 6 && !isMultiDay && (
                         <SemiBridalServiceSelection
                           onNext={onNext}
                           onBack={onPrev}
@@ -1261,7 +1319,7 @@ export default function App() {
                         />
                       )}
 
-                      {step === 6 && (
+                      {step === 7 && !isMultiDay && (
                         <SemiBridalAddons
                           onNext={onNext}
                           onBack={onPrev}
@@ -1272,7 +1330,7 @@ export default function App() {
                         />
                       )}
 
-                      {step === 7 && (
+                      {step === 8 && !isMultiDay && (
                         <SemiBridalParty
                           onNext={onNext}
                           onBack={onPrev}
@@ -1283,7 +1341,7 @@ export default function App() {
                         />
                       )}
 
-                      {step === 8 &&
+                      {step === 9 && !isMultiDay &&
                         getValues("service_type") === "Semi-Bridal" && (
                           <ClientDetails
                             onNext={onNext}
@@ -1302,7 +1360,7 @@ export default function App() {
                   )}
 
                 {/* Post-Booking Flow - Quote Review (Hidden for Bridal/Semi-Bridal) */}
-                {step === 12 &&
+                {step === 13 && !isMultiDay &&
                   getValues("service_type") !== "Bridal" &&
                   getValues("service_type") !== "Semi-Bridal" && (
                     <QuoteReview
@@ -1313,7 +1371,7 @@ export default function App() {
                   )}
 
                 {/* Post-Booking Flow - Artist Selection (Hidden for Bridal/Semi-Bridal) */}
-                {step === 13 &&
+                {step === 14 && !isMultiDay &&
                   getValues("service_type") !== "Bridal" &&
                   getValues("service_type") !== "Semi-Bridal" && (
                     <PostBookingArtistSelection
@@ -1325,7 +1383,7 @@ export default function App() {
                   )}
 
                 {/* Post-Booking Flow - Date & Time Selection (Hidden for Bridal/Semi-Bridal) */}
-                {step === 14 &&
+                {step === 15 && !isMultiDay &&
                   getValues("service_type") !== "Bridal" &&
                   getValues("service_type") !== "Semi-Bridal" && (
                     <DateTimeSelection
@@ -1339,7 +1397,7 @@ export default function App() {
                   )}
 
                 {/* Post-Booking Flow - Service Address (Hidden for Bridal/Semi-Bridal) */}
-                {step === 15 &&
+                {step === 16 && !isMultiDay &&
                   getValues("service_type") !== "Bridal" &&
                   getValues("service_type") !== "Semi-Bridal" && (
                     <ServiceAddress
@@ -1352,7 +1410,7 @@ export default function App() {
                   )}
 
                 {/* Post-Booking Flow - Contract Review (Hidden for Bridal/Semi-Bridal) */}
-                {step === 16 &&
+                {step === 17 && !isMultiDay &&
                   getValues("service_type") !== "Bridal" &&
                   getValues("service_type") !== "Semi-Bridal" && (
                     <div className="max-w-sm md:max-w-2xl lg:max-w-4xl mx-auto p-4 md:p-8 glass-card">
@@ -1736,7 +1794,7 @@ export default function App() {
                 {getValues("service_type") === "Non-Bridal" &&
                   getValues("region") !== "Destination Wedding" && (
                     <>
-                      {step === 5 && (
+                      {step === 6 && !isMultiDay && (
                         <NonBridalServiceSelection
                           onNext={onNext}
                           onBack={onPrev}
@@ -1747,7 +1805,7 @@ export default function App() {
                         />
                       )}
 
-                      {step === 6 && (
+                      {step === 7 && !isMultiDay && (
                         <NonBridalBreakdown
                           onNext={onNext}
                           onBack={onPrev}
@@ -1758,7 +1816,7 @@ export default function App() {
                         />
                       )}
 
-                      {step === 7 && (
+                      {step === 8 && !isMultiDay && (
                         <ClientDetails
                           onNext={onNext}
                           onBack={onPrev}
