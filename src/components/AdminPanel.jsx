@@ -294,8 +294,39 @@ function BookingDetails({ booking, onApprove, loading }) {
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Event Details</h3>
           <div className="space-y-2 text-sm">
-            <div><span className="font-medium">Event Date:</span> {formatDate(booking.event_date)}</div>
-            <div><span className="font-medium">Ready Time:</span> {formatTime(booking.ready_time)}</div>
+            {/* Multi-day indicator */}
+            {booking.is_multi_day && booking.total_days > 1 && (
+              <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded">
+                <span className="font-medium text-blue-900">Multi-Day Event:</span>
+                <span className="ml-2 text-blue-800">{booking.total_days} days</span>
+              </div>
+            )}
+            
+            <div>
+              <span className="font-medium">
+                {booking.is_multi_day ? 'First Event Date:' : 'Event Date:'}
+              </span>{' '}
+              {formatDate(booking.is_multi_day ? booking.days?.[0]?.event_date : booking.event_date)}
+            </div>
+            
+            {/* Show all event days for multi-day bookings */}
+            {booking.is_multi_day && booking.days && booking.days.length > 1 && (
+              <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded">
+                <div className="font-medium mb-2">All Event Days:</div>
+                <div className="space-y-2">
+                  {booking.days.map((day, idx) => (
+                    <div key={idx} className="flex justify-between text-xs">
+                      <span>
+                        Day {idx + 1}: {day.event_name || 'Event'}
+                      </span>
+                      <span>{formatDate(day.event_date)} @ {formatTime(day.ready_time)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div><span className="font-medium">Ready Time:</span> {formatTime(booking.is_multi_day ? booking.days?.[0]?.ready_time : booking.ready_time)}</div>
             <div><span className="font-medium">Address:</span> {booking.venue_address || booking.venue_name || 'N/A'}</div>
             {booking.venue_city && <div><span className="font-medium">City:</span> {booking.venue_city}</div>}
             {booking.venue_province && <div><span className="font-medium">Province:</span> {booking.venue_province}</div>}

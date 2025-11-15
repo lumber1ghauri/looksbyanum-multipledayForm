@@ -1,12 +1,17 @@
 import React from "react"
 
-export default function SemiBridalAddons({ onNext, onBack, register }) {
+export default function SemiBridalAddons({ onNext, onBack, register, dayNumber }) {
   const addonsList = [
     "Hair Extensions Installation",
     "Jewelry & Dupatta/Veil Setting",
     "Saree Draping",
     "Hijab Setting",
   ]
+
+  // Support both single-day and multi-day field paths
+  const getFieldName = (field) => {
+    return dayNumber !== undefined ? `days.${dayNumber}.${field}` : field;
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -18,7 +23,7 @@ export default function SemiBridalAddons({ onNext, onBack, register }) {
     <label className="group relative w-full p-3 sm:p-4 rounded-lg border border-gray-200 hover:border-gray-700 transition-all duration-300 text-left overflow-hidden cursor-pointer flex items-center gap-3 sm:gap-4">
       <input
         type="checkbox"
-        {...register("semi_bridal_addons")}
+        {...register(getFieldName("semi_bridal_addons"))}
         value={value}
         className="w-4 h-4 accent-gray-700"
       />

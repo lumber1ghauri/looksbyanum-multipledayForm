@@ -1,10 +1,121 @@
 import { z } from "zod";
 
+// ========== PER-DAY SERVICE SCHEMA (FOR MULTI-DAY BOOKINGS) ==========
+const DayServiceSchema = z.object({
+  day_number: z.number().min(1),
+  event_name: z.string().min(1, 'Event name is required'), // e.g., "Mehndi Night", "Wedding Ceremony"
+  event_date: z.string().min(1, 'Event date is required'),
+  ready_time: z.string().min(1, 'Ready time is required'),
+  
+  // Bridal service fields for this day
+  bride_service: z.string().optional(),
+  needs_trial: z.enum(["Yes", "No"]).optional().default("No"),
+  trial_service: z.string().optional(),
+  trial_date: z.string().optional(),
+  needs_jewelry: z.enum(["Yes", "No"]).optional().default("No"),
+  needs_extensions: z.enum(["Yes", "No"]).optional().default("No"),
+  needs_saree_draping: z.enum(["Yes", "No"]).optional().default("No"),
+  needs_hijab_setting: z.enum(["Yes", "No"]).optional().default("No"),
+
+  // Party member counts for this day
+  has_party_members: z.enum(["Yes", "No"]).optional().default("No"),
+  party_both_count: z.union([z.number().int().nonnegative(), z.string()]).transform((val) =>
+    val === "" ? 0 : typeof val === "string" ? parseInt(val) || 0 : val
+  ).default(0),
+  party_makeup_count: z.union([z.number().int().nonnegative(), z.string()]).transform((val) =>
+    val === "" ? 0 : typeof val === "string" ? parseInt(val) || 0 : val
+  ).default(0),
+  party_hair_count: z.union([z.number().int().nonnegative(), z.string()]).transform((val) =>
+    val === "" ? 0 : typeof val === "string" ? parseInt(val) || 0 : val
+  ).default(0),
+  party_dupatta_count: z.union([z.number().int().nonnegative(), z.string()]).transform((val) =>
+    val === "" ? 0 : typeof val === "string" ? parseInt(val) || 0 : val
+  ).default(0),
+  party_extensions_count: z.union([z.number().int().nonnegative(), z.string()]).transform((val) =>
+    val === "" ? 0 : typeof val === "string" ? parseInt(val) || 0 : val
+  ).default(0),
+  party_saree_draping_count: z.union([z.number().int().nonnegative(), z.string()]).transform((val) =>
+    val === "" ? 0 : typeof val === "string" ? parseInt(val) || 0 : val
+  ).default(0),
+  party_hijab_setting_count: z.union([z.number().int().nonnegative(), z.string()]).transform((val) =>
+    val === "" ? 0 : typeof val === "string" ? parseInt(val) || 0 : val
+  ).default(0),
+
+  // Airbrush for this day
+  has_airbrush: z.enum(["Yes", "No"]).optional().default("No"),
+  airbrush_count: z.union([z.number().int().nonnegative(), z.string()]).transform((val) =>
+    val === "" ? 0 : typeof val === "string" ? parseInt(val) || 0 : val
+  ).default(0),
+
+  // Non-bridal counts for this day (if applicable)
+  non_bridal_count: z.union([z.number().int().nonnegative(), z.string()]).transform((val) =>
+    val === "" ? 0 : typeof val === "string" ? parseInt(val) || 0 : val
+  ).default(0),
+  non_bridal_everyone_both: z.enum(["Yes", "No"]).optional().default("No"),
+  non_bridal_both_count: z.union([z.number().int().nonnegative(), z.string()]).transform((val) =>
+    val === "" ? 0 : typeof val === "string" ? parseInt(val) || 0 : val
+  ).default(0),
+  non_bridal_makeup_count: z.union([z.number().int().nonnegative(), z.string()]).transform((val) =>
+    val === "" ? 0 : typeof val === "string" ? parseInt(val) || 0 : val
+  ).default(0),
+  non_bridal_hair_count: z.union([z.number().int().nonnegative(), z.string()]).transform((val) =>
+    val === "" ? 0 : typeof val === "string" ? parseInt(val) || 0 : val
+  ).default(0),
+  non_bridal_extensions_count: z.union([z.number().int().nonnegative(), z.string()]).transform((val) =>
+    val === "" ? 0 : typeof val === "string" ? parseInt(val) || 0 : val
+  ).default(0),
+  non_bridal_jewelry_count: z.union([z.number().int().nonnegative(), z.string()]).transform((val) =>
+    val === "" ? 0 : typeof val === "string" ? parseInt(val) || 0 : val
+  ).default(0),
+  non_bridal_has_airbrush: z.enum(["Yes", "No"]).optional().default("No"),
+  non_bridal_airbrush_count: z.union([z.number().int().nonnegative(), z.string()]).transform((val) =>
+    val === "" ? 0 : typeof val === "string" ? parseInt(val) || 0 : val
+  ).default(0),
+  non_bridal_has_saree_draping: z.enum(["Yes", "No"]).optional().default("No"),
+  non_bridal_saree_draping_count: z.union([z.number().int().nonnegative(), z.string()]).transform((val) =>
+    val === "" ? 0 : typeof val === "string" ? parseInt(val) || 0 : val
+  ).default(0),
+  non_bridal_has_hijab_setting: z.enum(["Yes", "No"]).optional().default("No"),
+  non_bridal_hijab_setting_count: z.union([z.number().int().nonnegative(), z.string()]).transform((val) =>
+    val === "" ? 0 : typeof val === "string" ? parseInt(val) || 0 : val
+  ).default(0),
+
+  // Service address for this day (if mobile and different per day)
+  service_address: z.string().optional(),
+  service_city: z.string().optional(),
+  service_postal_code: z.string().optional(),
+  
+  // Artist selection for this day
+  artist: z.enum(["Lead", "Team"]).optional().or(z.literal("")).default(""),
+  
+  // Special requests for this specific day
+  special_requests: z.string().optional(),
+  
+  // Event type/location for this day
+  event_type: z.string().optional(),
+  event_location: z.string().optional(),
+  
+  // Pricing for this day (calculated)
+  day_subtotal: z.number().nonnegative().optional(),
+});
+
+export type DayService = z.infer<typeof DayServiceSchema>;
+
+// ========== MAIN BOOKING SCHEMA ==========
 export const BookingSchema = z
   .object({
     // Unique booking identifier
     unique_id: z.string().optional(),
 
+    // ========== MULTI-DAY BOOKING FIELDS (NEW) ==========
+    is_multi_day: z.boolean().optional().default(false),
+    total_days: z.number().min(1).max(14).optional(), // Max 14 days
+    days: z.array(DayServiceSchema).optional(), // Array of per-day configurations
+    current_day_index: z.number().min(0).optional(), // Track which day user is configuring (0-based)
+    multi_day_discount: z.number().min(0).optional(), // Discount amount for multi-day bookings
+
+    // ========== SINGLE-DAY FIELDS (BACKWARD COMPATIBILITY) ==========
+    // These fields are still used for single-day bookings and as fallback
     // Client information (matches backend model)
     first_name: z
       .string()
@@ -66,6 +177,7 @@ export const BookingSchema = z
     needs_jewelry: z.enum(["Yes", "No"]).optional().default("No"),
     needs_extensions: z.enum(["Yes", "No"]).optional().default("No"),
     needs_saree_draping: z.enum(["Yes", "No"]).optional().default("No"),
+    needs_hijab_setting: z.enum(["Yes", "No"]).optional().default("No"),
 
     // Party member counts
     has_party_members: z.enum(["Yes", "No"]).optional().default("No"),
@@ -171,6 +283,16 @@ export const BookingSchema = z
       .optional()
       .default("No"),
     non_bridal_saree_draping_count: z
+      .union([z.number().int().nonnegative(), z.string()])
+      .transform((val) =>
+        val === "" ? 0 : typeof val === "string" ? parseInt(val) || 0 : val
+      )
+      .default(0),
+    non_bridal_has_hijab_setting: z
+      .enum(["Yes", "No"])
+      .optional()
+      .default("No"),
+    non_bridal_hijab_setting_count: z
       .union([z.number().int().nonnegative(), z.string()])
       .transform((val) =>
         val === "" ? 0 : typeof val === "string" ? parseInt(val) || 0 : val

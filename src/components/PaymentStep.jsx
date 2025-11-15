@@ -20,10 +20,19 @@ export default function PaymentStep({ onBack, booking, quote, onPaymentSuccess }
       console.log('Creating/updating booking...');
       
       // 1) Persist the booking first so we have a booking_id
+      // Ensure multi-day data is included if applicable
+      const bookingData = {
+        ...booking,
+        is_multi_day: booking.is_multi_day || false,
+        total_days: booking.total_days || 1,
+        days: booking.days || [],
+        multi_day_discount: booking.multi_day_discount || 0
+      };
+      
       const saveRes = await fetch(`${apiBase}/bookings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(booking)
+        body: JSON.stringify(bookingData)
       });
       
       if (!saveRes.ok) {
@@ -33,7 +42,7 @@ export default function PaymentStep({ onBack, booking, quote, onPaymentSuccess }
       }
       
       const saved = await saveRes.json();
-      const bookingToUse = saved.booking || booking;
+      const bookingToUse = saved.booking || bookingData;
       setSavedBooking(bookingToUse);
       
       console.log('Booking saved:', bookingToUse);

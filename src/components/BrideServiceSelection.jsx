@@ -354,24 +354,44 @@ const CheckCircleIcon = ({ className = "w-5 h-5" }) => (
   </svg>
 )
 
-export default function BrideServiceSelection({ register, watch, errors, onNext, onBack, setValue }) {
+export default function BrideServiceSelection({ register, watch, errors, onNext, onBack, setValue, dayNumber }) {
   const watchedFields = watch()
-  const selectedService = watchedFields.bride_service
-  const needsTrial = watchedFields.needs_trial
-  const trialService = watchedFields.trial_service
-  const trialDate = watchedFields.trial_date
-  const trialTime = watchedFields.trial_time
+  
+  // Support both single-day and multi-day field paths
+  const getFieldName = (field) => {
+    return dayNumber !== undefined ? `days.${dayNumber}.${field}` : field;
+  };
+  
+  const selectedService = dayNumber !== undefined 
+    ? watchedFields.days?.[dayNumber]?.bride_service 
+    : watchedFields.bride_service;
+    
+  const needsTrial = dayNumber !== undefined 
+    ? watchedFields.days?.[dayNumber]?.needs_trial 
+    : watchedFields.needs_trial;
+    
+  const trialService = dayNumber !== undefined 
+    ? watchedFields.days?.[dayNumber]?.trial_service 
+    : watchedFields.trial_service;
+    
+  const trialDate = dayNumber !== undefined 
+    ? watchedFields.days?.[dayNumber]?.trial_date 
+    : watchedFields.trial_date;
+    
+  const trialTime = dayNumber !== undefined 
+    ? watchedFields.days?.[dayNumber]?.trial_time 
+    : watchedFields.trial_time;
 
-  const handleServiceSelect = (service) => setValue("bride_service", service)
+  const handleServiceSelect = (service) => setValue(getFieldName("bride_service"), service);
   const handleTrialSelect = (trial) => {
-    setValue("needs_trial", trial)
+    setValue(getFieldName("needs_trial"), trial);
     if (trial === "No") {
-      setValue("trial_service", "")
-      setValue("trial_date", "")
-      setValue("trial_time", "")
+      setValue(getFieldName("trial_service"), "");
+      setValue(getFieldName("trial_date"), "");
+      setValue(getFieldName("trial_time"), "");
     }
-  }
-  const handleTrialServiceSelect = (service) => setValue("trial_service", service)
+  };
+  const handleTrialServiceSelect = (service) => setValue(getFieldName("trial_service"), service);
 
   const handleNext = () => {
     if (
@@ -508,16 +528,17 @@ export default function BrideServiceSelection({ register, watch, errors, onNext,
               <div>
                 <DatePicker
                   label="Preferred Trial Date"
-                  name="trial_date"
+                  name={getFieldName("trial_date")}
                   register={register}
-                  error={errors.trial_date?.message}
-                  value={watchedFields.trial_date}
+                  error={dayNumber !== undefined ? errors.days?.[dayNumber]?.trial_date?.message : errors.trial_date?.message}
+                  value={trialDate}
                   required
                   minDaysAdvance={2}
                   maxDate={
-                    watchedFields.event_date
+                    (dayNumber !== undefined ? watchedFields.days?.[dayNumber]?.event_date : watchedFields.event_date)
                       ? (() => {
-                          const d = new Date(watchedFields.event_date)
+                          const eventDate = dayNumber !== undefined ? watchedFields.days?.[dayNumber]?.event_date : watchedFields.event_date;
+                          const d = new Date(eventDate)
                           d.setDate(d.getDate() - 1)
                           return d.toISOString().split("T")[0]
                         })()
@@ -528,10 +549,10 @@ export default function BrideServiceSelection({ register, watch, errors, onNext,
               <div>
                 <TimePicker
                   label="Preferred Trial Time"
-                  name="trial_time"
+                  name={getFieldName("trial_time")}
                   register={register}
-                  error={errors.trial_time?.message}
-                  value={watchedFields.trial_time}
+                  error={dayNumber !== undefined ? errors.days?.[dayNumber]?.trial_time?.message : errors.trial_time?.message}
+                  value={trialTime}
                   required
                 />
               </div>

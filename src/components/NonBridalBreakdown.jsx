@@ -8,26 +8,43 @@ export default function NonBridalBreakdown({
   onNext,
   onBack,
   setValue,
+  dayNumber
 }) {
   const watchedFields = watch();
-  const {
-    personCount,
-    bothCount,
-    makeupOnlyCount,
-    hairOnlyCount,
-    extensionsCount,
-    jewelryCount,
-    airbrushCount,
-    sareeDrapingCount,
-    hijabSettingCount,
-  } = watchedFields.nonBridal || {};
+  
+  // Support both single-day and multi-day field paths
+  const getFieldName = (field) => {
+    return dayNumber !== undefined ? `days.${dayNumber}.${field}` : field;
+  };
+  
+  const getData = (field) => {
+    if (dayNumber !== undefined) {
+      return watchedFields.days?.[dayNumber]?.nonBridal?.[field];
+    }
+    return watchedFields.nonBridal?.[field];
+  };
+  
+  const personCount = getData('personCount');
+  const bothCount = getData('bothCount');
+  const makeupOnlyCount = getData('makeupOnlyCount');
+  const hairOnlyCount = getData('hairOnlyCount');
+  const extensionsCount = getData('extensionsCount');
+  const jewelryCount = getData('jewelryCount');
+  const airbrushCount = getData('airbrushCount');
+  const sareeDrapingCount = getData('sareeDrapingCount');
+  const hijabSettingCount = getData('hijabSettingCount');
 
   const handleNext = () => {
     onNext();
   };
 
   const ServiceRow = ({ label, name, countName, register, watch }) => {
-    const checked = watch(name);
+    const fullName = getFieldName(name);
+    const fullCountName = getFieldName(countName);
+    const checked = dayNumber !== undefined 
+      ? watch(`days.${dayNumber}.${name}`)
+      : watch(name);
+    
     return (
       <div
         className={`flex justify-between items-center border border-gray-300 bg-white rounded-xl px-4 py-3 sm:px-6 sm:py-4 hover:shadow-sm transition-all duration-200 ${
@@ -37,7 +54,7 @@ export default function NonBridalBreakdown({
         <label className="flex items-center gap-3 text-gray-900 text-base font-light">
           <input
             type="checkbox"
-            {...register(name)}
+            {...register(fullName)}
             className="w-4 h-4 accent-gray-700"
           />
           {label}
@@ -48,7 +65,7 @@ export default function NonBridalBreakdown({
             type="number"
             min={1}
             placeholder="0"
-            {...register(countName)}
+            {...register(fullCountName)}
             className="w-20 sm:w-24 text-center border border-gray-300 rounded-lg px-2 py-1 text-gray-800 font-light focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition-all"
           />
         )}

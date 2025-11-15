@@ -1,8 +1,22 @@
 import Logo from "../assets/Black.png";
 
-export default function BookingHeader({ step, getTotalSteps, getStepTitle, isEditMode }) {
+export default function BookingHeader({ 
+  step, 
+  getTotalSteps, 
+  getStepTitle, 
+  isEditMode,
+  isMultiDay,
+  currentDayIndex,
+  totalDays,
+  daysData 
+}) {
   // Logic remains strictly unchanged.
-  const percentageComplete = Math.round((step / getTotalSteps()) * 100)
+  const percentageComplete = Math.round((step / getTotalSteps()) * 100);
+
+  // Get current day info for multi-day
+  const currentDayName = isMultiDay && daysData && daysData[currentDayIndex] 
+    ? daysData[currentDayIndex].event_name 
+    : null;
 
   return (
     <div className="text-center px-2 sm:px-4 max-w-3xl mx-auto mb-5 lg:mb-0">
@@ -14,13 +28,22 @@ export default function BookingHeader({ step, getTotalSteps, getStepTitle, isEdi
         />
       </div>
 
-      {/* Subheading - reduced from h1 to smaller text */}
-      {/* <p
-        className="text-lg sm:text-xl text-gray-700 font-light max-w-2xl mx-auto mb-2"
-        style={{ letterSpacing: "0.01em" }}
-      >
-        {isEditMode ? "Edit Your Booking" : ""}
-      </p> */}
+      {/* Multi-day progress indicator */}
+      {isMultiDay && totalDays > 1 && currentDayIndex !== undefined && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-center gap-2 text-sm sm:text-base">
+            <span className="text-blue-900 font-semibold">
+              Day {currentDayIndex + 1} of {totalDays}
+            </span>
+            {currentDayName && (
+              <>
+                <span className="text-blue-600">•</span>
+                <span className="text-blue-800">{currentDayName}</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <p
         className="text-sm sm:text-base text-gray-600 font-light max-w-2xl mx-auto lg:mb-4 mb-8"

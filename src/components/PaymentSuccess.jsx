@@ -824,18 +824,49 @@ Client Signature:`;
             <div>
               <span className="font-medium">Service Type:</span>{" "}
               {booking.service_type}
+              {booking.is_multi_day && (
+                <span className="ml-2 px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
+                  Multi-Day ({booking.total_days} days)
+                </span>
+              )}
             </div>
             <div>
               <span className="font-medium">Status:</span> PAID & CONFIRMED
             </div>
-            <div>
-              <span className="font-medium">Event Date:</span>{" "}
-              {booking.event_date?.toString().slice(0, 10)}
-            </div>
-            <div>
-              <span className="font-medium">Ready Time:</span>{" "}
-              {formatTimeTo12Hour(booking.ready_time)}
-            </div>
+            
+            {booking.is_multi_day && booking.days ? (
+              <div className="md:col-span-2">
+                <span className="font-medium">Event Dates:</span>
+                <div className="mt-2 space-y-2">
+                  {booking.days.map((day, index) => (
+                    <div key={index} className="pl-4 border-l-2 border-purple-300 text-sm">
+                      <div className="font-semibold text-purple-700">
+                        Day {index + 1}: {day.event_name || 'Unnamed Event'}
+                      </div>
+                      <div className="text-gray-600">
+                        {day.event_date?.toString().slice(0, 10)} • Ready at {formatTimeTo12Hour(day.ready_time)}
+                      </div>
+                      {day.venue_name && (
+                        <div className="text-gray-500 text-xs">
+                          {day.venue_name}, {day.venue_city}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <span className="font-medium">Event Date:</span>{" "}
+                  {booking.event_date?.toString().slice(0, 10)}
+                </div>
+                <div>
+                  <span className="font-medium">Ready Time:</span>{" "}
+                  {formatTimeTo12Hour(booking.ready_time)}
+                </div>
+              </>
+            )}
           </div>
 
           <h2 className="text-lg font-semibold text-gray-900 mb-3">

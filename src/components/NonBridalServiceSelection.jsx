@@ -17,9 +17,18 @@ export default function NonBridalServiceSelection({
   errors,
   onNext,
   onBack,
+  dayNumber
 }) {
   const watchedFields = watch();
-  const personCount = watchedFields.nonBridal?.personCount || "";
+  
+  // Support both single-day and multi-day field paths
+  const getFieldName = (field) => {
+    return dayNumber !== undefined ? `days.${dayNumber}.${field}` : field;
+  };
+  
+  const personCount = dayNumber !== undefined 
+    ? watchedFields.days?.[dayNumber]?.nonBridal?.personCount || ""
+    : watchedFields.nonBridal?.personCount || "";
 
   const handleNext = () => {
     if (personCount && personCount > 0) onNext();
@@ -52,16 +61,16 @@ export default function NonBridalServiceSelection({
             type="number"
             min={1}
             placeholder="Enter number of people"
-            {...register("nonBridal.personCount", { required: true, min: 1 })}
+            {...register(getFieldName("nonBridal.personCount"), { required: true, min: 1 })}
             className={`w-full px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl border text-gray-800 font-light transition-all duration-300 
               ${
-                errors?.nonBridal?.personCount
+                (dayNumber !== undefined ? errors.days?.[dayNumber]?.nonBridal?.personCount : errors?.nonBridal?.personCount)
                   ? "border-red-400 focus:border-red-500 focus:ring-red-500/40"
                   : "border-gray-300 focus:border-gray-500 focus:ring-gray-400/30"
               } focus:ring-1 bg-white`}
           />
 
-          {errors?.nonBridal?.personCount && (
+          {(dayNumber !== undefined ? errors.days?.[dayNumber]?.nonBridal?.personCount : errors?.nonBridal?.personCount) && (
             <div className="mt-3 flex items-center p-2.5 bg-red-50 border border-red-300 rounded-lg text-sm text-red-700 font-light">
               <ErrorIcon className="w-4 h-4 mr-2 flex-shrink-0" />
               Please enter how many people need service (minimum 1).

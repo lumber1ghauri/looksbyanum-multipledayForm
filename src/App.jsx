@@ -36,6 +36,10 @@ import ServiceAddress from "./components/ServiceAddress.jsx";
 import BookingHeader from "./components/BookingHeader.jsx";
 import EditBookingLookup from "./components/EditBookingLookup.jsx";
 import PaymentScreenshotUpload from "./components/PaymentScreenshotUpload.jsx";
+import MultiDaySelection from "./components/MultiDaySelection.jsx";
+import DayConfiguration from "./components/DayConfiguration.jsx";
+import DayNavigator from "./components/DayNavigator.jsx";
+import MultiDayQuoteReview from "./components/MultiDayQuoteReview.jsx";
 import { loadStripe } from "@stripe/stripe-js";
 import React from "react";
 // Load Stripe with the publishable key 
@@ -64,6 +68,12 @@ export default function App() {
   const [editingBookingId, setEditingBookingId] = useState("");
   const [editBookingData, setEditBookingData] = useState(null);
   const [showEditLookup, setShowEditLookup] = useState(false);
+  
+  // ========== MULTI-DAY BOOKING STATE ==========
+  const [isMultiDay, setIsMultiDay] = useState(false);
+  const [totalDays, setTotalDays] = useState(1);
+  const [currentDayIndex, setCurrentDayIndex] = useState(0); // 0-based index
+  const [daysData, setDaysData] = useState([]); // Array of per-day configurations
 
   // Handle URL parameters for remaining payment links
   useEffect(() => {
@@ -502,6 +512,24 @@ export default function App() {
       return 7; // Destination wedding flow: steps 1-7 (service mode + 6 existing steps)
     }
 
+    // MULTI-DAY BOOKING: Add extra steps for day configuration
+    if (isMultiDay) {
+      // Step 1: Service Mode
+      // Step 2: Region
+      // Step 3: Service Type
+      // Step 4: Multi-Day Selection (NEW)
+      // Steps 5-N: Per-day configuration (repeated for each day)
+      // Step after days: Client Details
+      // Final step: Quote Review (or payment for Non-Bridal)
+      
+      const baseSteps = 4; // Mode, Region, Type, Multi-Day Selection
+      const daysConfigSteps = totalDays * 3; // Each day has 3 sub-steps (service, party, addons)
+      const finalSteps = 2; // Client Details + Quote/Payment
+      
+      return baseSteps + daysConfigSteps + finalSteps;
+    }
+
+    // SINGLE-DAY BOOKING (original logic)
     if (serviceType === "Non-Bridal") {
       return 8; // Non-Bridal flow: steps 1-8 (service mode + 7 existing steps including payment)
     } else if (serviceType === "Bridal") {
@@ -518,6 +546,56 @@ export default function App() {
     const serviceType = getValues("service_type");
     const totalSteps = getTotalSteps();
     console.log("Service type:", serviceType, "Total steps:", totalSteps);
+
+    // ========== HANDLE STEP 4: MULTI-DAY SELECTION ==========
+    if (step === 4 && !isMultiDay) {
+      // User is on multi-day selection step - check if they selected multi-day
+      const selectedMultiDay = getValues("is_multi_day");
+      const selectedTotalDays = getValues("total_days");
+      
+      if (selectedMultiDay && selectedTotalDays > 1) {
+        // Initialize multi-day booking
+        setIsMultiDay(true);
+        setTotalDays(selectedTotalDays);
+        setCurrentDayIndex(0);
+        
+        // Initialize days array with empty objects
+        const emptyDays = Array.from({ length: selectedTotalDays }, (_, i) => ({
+          day_number: i + 1,
+          event_name: '',
+          event_date: '',
+          ready_time: '',
+        }));
+        setDaysData(emptyDays);
+        
+        console.log(`Multi-day booking initialized: ${selectedTotalDays} days`);
+      }
+      
+      // Continue to next step
+      setStep((s) => Math.min(s + 1, totalSteps));
+      return;
+    }
+
+    // ========== HANDLE MULTI-DAY DAY PROGRESSION ==========
+    if (isMultiDay && currentDayIndex < totalDays - 1) {
+      // Save current day's data
+      const currentDayData = getValues();
+      const updatedDays = [...daysData];
+      updatedDays[currentDayIndex] = {
+        ...updatedDays[currentDayIndex],
+        ...currentDayData,
+        day_number: currentDayIndex + 1,
+      };
+      setDaysData(updatedDays);
+      
+      // Move to next day
+      setCurrentDayIndex(currentDayIndex + 1);
+      console.log(`Moving to day ${currentDayIndex + 2} of ${totalDays}`);
+      
+      // Reset to first service selection step for next day (step 5)
+      setStep(5);
+      return;
+    }
 
     // Special handling for contact information step
     const region = getValues("region");
@@ -546,6 +624,12 @@ export default function App() {
           ...(isEditMode &&
             editingBookingId && { unique_id: editingBookingId }),
 
+          // ========== MULTI-DAY BOOKING DATA ==========
+          is_multi_day: isMultiDay,
+          total_days: isMultiDay ? totalDays : 1,
+          days: isMultiDay ? daysData : undefined,
+          current_day_index: isMultiDay ? currentDayIndex : undefined,
+
           // Basic contact info
           name: `${data.first_name || ""} ${data.last_name || ""}`.trim(),
           email: data.email,
@@ -557,9 +641,9 @@ export default function App() {
           service_type: data.service_type,
           service_mode: data.service_mode,
 
-          // Event details
-          event_date: data.event_date,
-          ready_time: data.ready_time,
+          // Event details (single-day only, for backward compatibility)
+          event_date: !isMultiDay ? data.event_date : undefined,
+          ready_time: !isMultiDay ? data.ready_time : undefined,
 
           // Destination wedding fields
           event_start_date: data.event_start_date,
@@ -715,12 +799,32 @@ export default function App() {
         "🔍 Frontend: needs_hijab_setting value:",
         data.needs_hijab_setting
       );
-      const r = await api.post("/quote", data);
-      console.log("🔍 Frontend: Quote response:", r.data);
-      setQuote(r.data);
-      setValue("pricing.quote_total", r.data.quote_total);
-      setValue("pricing.deposit_amount", r.data.deposit_amount);
-      setValue("pricing.remaining_amount", r.data.remaining_amount);
+      
+      // ========== MULTI-DAY QUOTE GENERATION ==========
+      if (isMultiDay) {
+        const multiDayQuoteData = {
+          ...data,
+          is_multi_day: true,
+          total_days: totalDays,
+          days: daysData,
+        };
+        
+        const r = await api.post("/quote/multi-day", multiDayQuoteData);
+        console.log("🔍 Frontend: Multi-day quote response:", r.data);
+        setQuote(r.data);
+        setValue("pricing.quote_total", r.data.quote_total);
+        setValue("pricing.deposit_amount", r.data.deposit_amount);
+        setValue("pricing.remaining_amount", r.data.remaining_amount);
+        setValue("multi_day_discount", r.data.multi_day_discount || 0);
+      } else {
+        // ========== SINGLE-DAY QUOTE (ORIGINAL) ==========
+        const r = await api.post("/quote", data);
+        console.log("🔍 Frontend: Quote response:", r.data);
+        setQuote(r.data);
+        setValue("pricing.quote_total", r.data.quote_total);
+        setValue("pricing.deposit_amount", r.data.deposit_amount);
+        setValue("pricing.remaining_amount", r.data.remaining_amount);
+      }
 
       // If booking already exists, update it with pricing information
       if (data.booking_id && data.booking_id !== "temp") {

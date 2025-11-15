@@ -7,11 +7,19 @@ const CheckCircleIcon = ({ className = "w-5 h-5" }) => (
   </svg>
 )
 
-export default function SemiBridalServiceSelection({ register, watch, errors, onNext, onBack, setValue }) {
+export default function SemiBridalServiceSelection({ register, watch, errors, onNext, onBack, setValue, dayNumber }) {
   const watchedFields = watch()
-  const selectedService = watchedFields.bride_service
+  
+  // Support both single-day and multi-day field paths
+  const getFieldName = (field) => {
+    return dayNumber !== undefined ? `days.${dayNumber}.${field}` : field;
+  };
+  
+  const selectedService = dayNumber !== undefined 
+    ? watchedFields.days?.[dayNumber]?.bride_service 
+    : watchedFields.bride_service;
 
-  const handleServiceSelect = (service) => setValue("bride_service", service)
+  const handleServiceSelect = (service) => setValue(getFieldName("bride_service"), service)
   const handleNext = () => {
     if (selectedService) onNext()
   }
@@ -111,9 +119,11 @@ export default function SemiBridalServiceSelection({ register, watch, errors, on
         </div>
 
         {/* Validation Message */}
-        {errors.bride_service && (
+        {(dayNumber !== undefined ? errors.days?.[dayNumber]?.bride_service : errors.bride_service) && (
           <div className="mb-6 p-3 bg-gray-50 border border-gray-300 rounded-md text-center">
-            <p className="text-sm text-gray-700 font-light">{errors.bride_service.message}</p>
+            <p className="text-sm text-gray-700 font-light">
+              {dayNumber !== undefined ? errors.days?.[dayNumber]?.bride_service?.message : errors.bride_service?.message}
+            </p>
           </div>
         )}
 

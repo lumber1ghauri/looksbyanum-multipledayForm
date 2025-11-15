@@ -7,9 +7,33 @@ export default function ContractReview({ register, watch, errors, onNext, onBack
   
   const watchedFields = watch();
   const today = new Date().toISOString().split('T')[0];
+  
+  const isMultiDay = watchedFields.is_multi_day;
+  const totalDays = watchedFields.total_days || 1;
+  const daysData = watchedFields.days || [];
 
   // Calculate total pricing
   const calculatePricing = () => {
+    if (isMultiDay) {
+      // For multi-day, we already have the calculated pricing from the quote
+      const multiDayDiscount = watchedFields.multi_day_discount || 0;
+      const subtotal = watchedFields.quote?.subtotal || 0;
+      const beforeGST = subtotal - multiDayDiscount;
+      const gst = Math.round(beforeGST * 0.05 * 100) / 100;
+      const total = beforeGST + gst;
+      
+      return {
+        subtotal,
+        multiDayDiscount,
+        beforeGST,
+        gst,
+        total,
+        travelFee: 0, // Included in subtotal for multi-day
+        earlyFee: 0   // Included in subtotal for multi-day
+      };
+    }
+    
+    // Single-day pricing calculation
     let subtotal = 0;
     const serviceType = watchedFields.service_type;
     const packageType = watchedFields.package?.type || 'senior';
@@ -139,15 +163,37 @@ export default function ContractReview({ register, watch, errors, onNext, onBack
             <div>
               <strong>Package:</strong> {packageType?.charAt(0).toUpperCase() + packageType?.slice(1)} Artist
             </div>
-            <div>
-              <strong>Date:</strong> {formatDate(event.date)}
-            </div>
-            <div>
-              <strong>Ready By:</strong> {event.ready_time || 'Not set'}
-            </div>
-            <div className="md:col-span-2">
-              <strong>Address:</strong> {formatAddress()}
-            </div>
+            
+            {isMultiDay ? (
+              <>
+                <div className="md:col-span-2">
+                  <strong className="text-purple-600">Multi-Day Event:</strong> {totalDays} days
+                </div>
+                {daysData.map((day, index) => (
+                  <div key={index} className="md:col-span-2 pl-4 border-l-2 border-purple-200">
+                    <div className="font-semibold text-purple-700">Day {index + 1} - {day.event_name || 'Unnamed Event'}</div>
+                    <div className="text-xs text-gray-600">
+                      {formatDate(day.event_date)} • Ready by {day.ready_time || 'Not set'}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      {day.venue_name ? `${day.venue_name}, ${day.venue_city}` : 'Venue TBD'}
+                    </div>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <>
+                <div>
+                  <strong>Date:</strong> {formatDate(event.date)}
+                </div>
+                <div>
+                  <strong>Ready By:</strong> {event.ready_time || 'Not set'}
+                </div>
+                <div className="md:col-span-2">
+                  <strong>Address:</strong> {formatAddress()}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -234,6 +280,14 @@ export default function ContractReview({ register, watch, errors, onNext, onBack
                 <span>Subtotal:</span>
                 <span>${pricing.beforeGST}</span>
               </div>
+              
+              {isMultiDay && pricing.multiDayDiscount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Multi-Day Discount ({totalDays >= 5 ? '10%' : '5%'}):</span>
+                  <span>-${pricing.multiDayDiscount.toFixed(2)}</span>
+                </div>
+              )}
+              
               <div className="flex justify-between">
                 <span>GST (5%):</span>
                 <span>${pricing.gst}</span>

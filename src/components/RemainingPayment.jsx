@@ -442,10 +442,37 @@ export default function RemainingPayment() {
                   <span className="text-gray-600">Service:</span>
                   <span className="text-gray-900 font-medium">{booking.service_type}</span>
                 </div>
+                
+                {/* Multi-day indicator */}
+                {booking.is_multi_day && booking.total_days > 1 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Event Type:</span>
+                    <span className="text-blue-900 font-medium">Multi-Day ({booking.total_days} days)</span>
+                  </div>
+                )}
+                
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Event Date:</span>
-                  <span className="text-gray-900 font-medium">{formatDate(booking.event_date)}</span>
+                  <span className="text-gray-600">{booking.is_multi_day ? 'First Event Date:' : 'Event Date:'}</span>
+                  <span className="text-gray-900 font-medium">
+                    {formatDate(booking.is_multi_day ? booking.days?.[0]?.event_date : booking.event_date)}
+                  </span>
                 </div>
+                
+                {/* Show all days for multi-day bookings */}
+                {booking.is_multi_day && booking.days && booking.days.length > 1 && (
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <span className="text-gray-600 text-xs uppercase tracking-wide">All Event Dates:</span>
+                    <div className="mt-2 space-y-1">
+                      {booking.days.map((day, idx) => (
+                        <div key={idx} className="flex justify-between text-xs">
+                          <span className="text-gray-600">Day {idx + 1}: {day.event_name || 'Event'}</span>
+                          <span className="text-gray-900">{formatDate(day.event_date)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
                 <div className="flex justify-between">
                   <span className="text-gray-600">Total Amount:</span>
                   <span className="text-gray-900 font-medium">${booking.pricing?.quote_total?.toFixed(2) || '0.00'}</span>

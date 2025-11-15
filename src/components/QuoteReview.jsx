@@ -1,6 +1,27 @@
   import React from 'react';
+  import MultiDayQuoteReview from './MultiDayQuoteReview';
 
-  const QuoteReview = ({ onNext, onBack, getValues }) => {
+  const QuoteReview = ({ onNext, onBack, getValues, quote }) => {
+    const isMultiDay = getValues('is_multi_day');
+    const daysData = getValues('days') || [];
+    const totalDays = getValues('total_days') || 1;
+    const multiDayDiscount = getValues('multi_day_discount') || quote?.multi_day_discount || 0;
+
+    // If multi-day, use the specialized component
+    if (isMultiDay) {
+      return (
+        <MultiDayQuoteReview
+          quote={quote}
+          daysData={daysData}
+          totalDays={totalDays}
+          multiDayDiscount={multiDayDiscount}
+          onNext={onNext}
+          onBack={onBack}
+        />
+      );
+    }
+
+    // Single-day quote review (original)
     return (
       <div className="max-w-sm md:max-w-2xl mx-auto p-4 md:p-8 glass-card">
         <h2 className="text-2xl font-bold text-gray-900 mb-8 text-left">

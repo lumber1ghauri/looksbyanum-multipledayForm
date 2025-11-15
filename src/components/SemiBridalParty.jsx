@@ -3,18 +3,28 @@ import React from "react"
 
 const WARNING_COLOR_CLASS = "amber-300"
 
-export default function SemiBridalParty({ register, watch, errors, onNext, onBack, setValue }) {
+export default function SemiBridalParty({ register, watch, errors, onNext, onBack, setValue, dayNumber }) {
   const watchedFields = watch()
 
-  const hairCount = Number(watchedFields.party_hair_count || 0)
-  const makeupCount = Number(watchedFields.party_makeup_count || 0)
-  const bothCount = Number(watchedFields.party_both_count || 0)
-  const dupattaCount = Number(watchedFields.party_dupatta_count || 0)
-  const extensionsCount = Number(watchedFields.party_extensions_count || 0)
-  const sareeDrapingCount = Number(watchedFields.party_saree_draping_count || 0)
-  const hijabSettingCount = Number(watchedFields.party_hijab_setting_count || 0)
-  const airbrushCount = Number(watchedFields.airbrush_count || 0)
-  const hasAirbrush = watchedFields.has_airbrush === "Yes"
+  // Support both single-day and multi-day field paths
+  const getFieldName = (field) => {
+    return dayNumber !== undefined ? `days.${dayNumber}.${field}` : field;
+  };
+  
+  const getData = (field) => {
+    return dayNumber !== undefined 
+      ? watchedFields.days?.[dayNumber]?.[field] 
+      : watchedFields[field];
+  };
+
+  const hairCount = Number(getData("party_hair_count") || 0);
+  const makeupCount = Number(getData("party_makeup_count") || 0);
+  const bothCount = Number(getData("party_both_count") || 0);
+  const dupattaCount = Number(getData("party_dupatta_count") || 0);
+  const extensionsCount = Number(getData("party_extensions_count") || 0);
+  const sareeDrapingCount = Number(getData("party_saree_draping_count") || 0);
+  const hijabSettingCount = Number(getData("party_hijab_setting_count") || 0);
+  const hasAirbrush = getData("has_airbrush") === "Yes";
 
   const totalPartyMembers = hairCount + makeupCount + bothCount
   const totalHairCount = hairCount + bothCount
@@ -22,19 +32,19 @@ export default function SemiBridalParty({ register, watch, errors, onNext, onBac
 
   const handleCountChange = (field, value) => {
     const numValue = value === "" ? "" : Number.parseInt(value) || ""
-    setValue(`party_${field}_count`, numValue)
+    setValue(getFieldName(`party_${field}_count`), numValue)
 
     const total =
       (field === "both" ? numValue : bothCount) +
       (field === "makeup" ? numValue : makeupCount) +
       (field === "hair" ? numValue : hairCount)
-    if (total > 0) setValue("has_party_members", "Yes")
+    if (total > 0) setValue(getFieldName("has_party_members"), "Yes")
   }
 
   const RadioOption = ({ label, value, fieldName, isSelected }) => (
     <button
       type="button"
-      onClick={() => setValue(fieldName, value)}
+      onClick={() => setValue(getFieldName(fieldName), value)}
       className={`group relative w-full flex items-center justify-between p-3 sm:p-3.5 rounded-lg border transition-all duration-300 cursor-pointer overflow-hidden ${
         isSelected
           ? "border-gray-700 bg-gray-100 shadow-md shadow-gray-400/20"
@@ -94,18 +104,18 @@ export default function SemiBridalParty({ register, watch, errors, onNext, onBac
             label="Yes"
             value="Yes"
             fieldName="has_party_members"
-            isSelected={watchedFields.has_party_members === "Yes"}
+            isSelected={getData("has_party_members") === "Yes"}
           />
           <RadioOption
             label="No"
             value="No"
             fieldName="has_party_members"
-            isSelected={watchedFields.has_party_members === "No"}
+            isSelected={getData("has_party_members") === "No"}
           />
         </div>
 
         {/* Service List */}
-        {watchedFields.has_party_members === "Yes" && (
+        {getData("has_party_members") === "Yes" && (
           <div className="space-y-2">
             <div className="mb-3 text-left">
               <p className="text-gray-700 text-sm sm:text-base font-light">
