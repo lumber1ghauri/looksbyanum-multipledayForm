@@ -121,12 +121,19 @@ export default function ClientDetails({
           <button
             type="button"
             disabled={isDisabled}
-            onClick={() =>
+            onClick={() => {
+              console.log("🔘 ClientDetails Continue button clicked");
+              console.log("📋 Current form values:", getValues());
+              console.log("❗ Current form errors:", errors);
               handleSubmit(
                 (data) => onSubmit(data),
-                (validationErrors) => setIsSubmitting(false)
-              )()
-            }
+                (validationErrors) => {
+                  console.error("❌ Form validation failed:", validationErrors);
+                  console.error("❌ Error fields:", Object.keys(validationErrors));
+                  setIsSubmitting(false);
+                }
+              )();
+            }}
             className={`relative px-8 sm:px-10 py-2.5 sm:py-3 text-sm sm:text-base font-light rounded-lg transition-all duration-300 overflow-hidden ${
               isNextEnabled && !showLoaderVisual
                 ? "bg-gradient-to-r from-gray-700 via-gray-800 to-gray-900 text-white shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-100 cursor-pointer border border-gray-600"

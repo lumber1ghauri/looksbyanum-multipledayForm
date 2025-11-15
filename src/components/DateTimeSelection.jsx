@@ -73,25 +73,42 @@ const DateTimeSelection = ({ onNext, onBack, register, setValue, getValues, erro
           <label className="block text-sm font-semibold text-gray-800 mb-2">
             {dayNumber !== undefined ? "Ready Time" : "Service Time"} <span className="text-red-500">*</span>
           </label>
+          
+          {/* Hidden input to register the field */}
+          <input
+            type="hidden"
+            {...register(getFieldName(dayNumber !== undefined ? 'ready_time' : 'service_time'), {
+              required: 'Please select a time'
+            })}
+          />
+          
           <div className="grid grid-cols-2 gap-3">
             {[
               '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
               '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM',
               '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM'
-            ].map((time) => (
-              <button
-                key={time}
-                type="button"
-                onClick={() => setValue(getFieldName(dayNumber !== undefined ? 'ready_time' : 'service_time'), time)}
-                className={`p-3 text-center border rounded-lg transition-all duration-200 ${
-                  getFieldValue(dayNumber !== undefined ? 'ready_time' : 'service_time') === time
-                    ? 'border-gray-800 bg-gray-900 text-gray-100 font-medium shadow-sm'
-                    : 'border-gray-300 hover:border-gray-700 text-gray-800 bg-gray-50 hover:bg-gray-100'
-                }`}
-              >
-                {time}
-              </button>
-            ))}
+            ].map((time) => {
+              const fieldName = getFieldName(dayNumber !== undefined ? 'ready_time' : 'service_time');
+              const currentValue = getFieldValue(dayNumber !== undefined ? 'ready_time' : 'service_time');
+              const isSelected = currentValue === time;
+              
+              return (
+                <button
+                  key={time}
+                  type="button"
+                  onClick={() => {
+                    setValue(fieldName, time, { shouldValidate: true });
+                  }}
+                  className={`p-3 text-center border rounded-lg transition-all duration-200 ${
+                    isSelected
+                      ? 'border-gray-800 bg-gray-900 text-white font-medium shadow-sm'
+                      : 'border-gray-300 hover:border-gray-700 text-gray-800 bg-white hover:bg-gray-50'
+                  }`}
+                >
+                  {time}
+                </button>
+              );
+            })}
           </div>
           {getFieldError(dayNumber !== undefined ? 'ready_time' : 'service_time') && (
             <p className="mt-1 text-sm text-red-600">

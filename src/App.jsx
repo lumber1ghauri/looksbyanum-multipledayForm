@@ -74,6 +74,7 @@ export default function App() {
   const [totalDays, setTotalDays] = useState(1);
   const [currentDayIndex, setCurrentDayIndex] = useState(0); // 0-based index
   const [daysData, setDaysData] = useState([]); // Array of per-day configurations
+  const [completedDays, setCompletedDays] = useState([]); // Array of completed day indices
 
   // Handle URL parameters for remaining payment links
   useEffect(() => {
@@ -371,44 +372,45 @@ export default function App() {
     );
 
     const serviceType = getValues("service_type");
-    console.log("Service type from form:", serviceType);
+    const isMultiDay = getValues("is_multi_day");
+    console.log("Service type from form:", serviceType, "isMultiDay:", isMultiDay);
 
-    const isContractReviewStep =
-      (serviceType === "Bridal" && step === 13) ||
-      (serviceType === "Semi-Bridal" && step === 11);
+    // For single-day bookings, send email at step 10 (QuoteReview)
+    // For multi-day bookings, different logic applies
+    const isQuoteReviewStep = !isMultiDay && step === 10;
 
     console.log("Email check:", {
       step,
       serviceType,
-      isContractReviewStep,
+      isMultiDay,
+      isQuoteReviewStep,
       confirmationEmailSent,
-      expectedStep: serviceType === "Bridal" ? 12 : 10,
     });
 
-    if (isContractReviewStep && !confirmationEmailSent) {
+    if (isQuoteReviewStep && !confirmationEmailSent) {
       const bookingData = getValues();
 
-      console.log("Contract review step reached, checking data:", {
-        hasEmail: !!bookingData.client?.email,
-        hasName: !!bookingData.client?.name?.trim(),
-        hasFirstName: !!bookingData.client?.first_name?.trim(),
-        hasLastName: !!bookingData.client?.last_name?.trim(),
-        email: bookingData.client?.email,
-        name: bookingData.client?.name,
-        firstName: bookingData.client?.first_name,
-        lastName: bookingData.client?.last_name,
+      console.log("Quote review step reached, checking data:", {
+        hasEmail: !!bookingData.email,
+        hasFirstName: !!bookingData.first_name?.trim(),
+        hasLastName: !!bookingData.last_name?.trim(),
+        email: bookingData.email,
+        firstName: bookingData.first_name,
+        lastName: bookingData.last_name,
       });
 
       // Check if we have minimum required data for email
-      const hasEmail = !!bookingData.client?.email;
-      const hasName = !!bookingData.client?.name?.trim();
-      const hasFirstLast = !!(
-        bookingData.client?.first_name?.trim() &&
-        bookingData.client?.last_name?.trim()
-      );
+      const hasEmail = !!bookingData.email;
+      const hasFirstName = !!bookingData.first_name?.trim();
+      const hasLastName = !!bookingData.last_name?.trim();
 
-      if (hasEmail && (hasName || hasFirstLast)) {
-        console.log("Sending booking confirmation email...", bookingData);
+      if (hasEmail && hasFirstName && hasLastName) {
+        console.log("Sending booking confirmation email...", {
+          email: bookingData.email,
+          name: `${bookingData.first_name} ${bookingData.last_name}`,
+          service_type: bookingData.service_type,
+          booking_id: bookingData.booking_id,
+        });
 
         // Send confirmation email
         api
@@ -418,14 +420,6 @@ export default function App() {
               "Booking confirmation email sent successfully:",
               response.data
             );
-            // Store the booking_id for later use when creating the booking
-            if (response.data.booking_id) {
-              setValue("booking_id", response.data.booking_id);
-              console.log(
-                "Stored booking_id from confirmation email:",
-                response.data.booking_id
-              );
-            }
             setConfirmationEmailSent(true);
             window.showToast(
               "Booking confirmation email sent! Please check your email.",
@@ -554,14 +548,14 @@ export default function App() {
 
     // SINGLE-DAY BOOKING (original logic) - Updated for new step 4
     if (serviceType === "Non-Bridal") {
-      return 9; // Non-Bridal flow: steps 1-9 (+1 for multi-day selection step)
+      return 11; // Non-Bridal flow: steps 1-11 (includes quote review + next step)
     } else if (serviceType === "Bridal") {
-      return 9; // Bridal flow: steps 1-9 (+1 for multi-day selection step)
+      return 11; // Bridal flow: steps 1-11 (includes quote review + next step)
     } else if (serviceType === "Semi-Bridal") {
-      return 9; // Semi-Bridal flow: steps 1-9 (+1 for multi-day selection step)
+      return 11; // Semi-Bridal flow: steps 1-11 (includes quote review + next step)
     }
 
-    return 9; // Default fallback (+1 for multi-day selection step)
+    return 11; // Default fallback (includes quote review + next step)
   };
 
   const onNext = async () => {
@@ -571,16 +565,22 @@ export default function App() {
     console.log("Service type:", serviceType, "Total steps:", totalSteps);
 
     // ========== HANDLE STEP 4: MULTI-DAY SELECTION ==========
-    if (step === 4 && !isMultiDay) {
+    if (step === 4) {
       // User is on multi-day selection step - check if they selected multi-day
       const selectedMultiDay = getValues("is_multi_day");
-      const selectedTotalDays = getValues("total_days");
+      const selectedTotalDays = parseInt(getValues("total_days")) || 1;
+      
+      console.log('Multi-day selection:', { selectedMultiDay, selectedTotalDays });
       
       if (selectedMultiDay && selectedTotalDays > 1) {
         // Initialize multi-day booking
         setIsMultiDay(true);
         setTotalDays(selectedTotalDays);
         setCurrentDayIndex(0);
+        
+        // Set form values for multi-day
+        setValue("is_multi_day", true);
+        setValue("total_days", selectedTotalDays);
         
         // Initialize days array with empty objects
         const emptyDays = Array.from({ length: selectedTotalDays }, (_, i) => ({
@@ -592,44 +592,99 @@ export default function App() {
         setDaysData(emptyDays);
         
         console.log(`Multi-day booking initialized: ${selectedTotalDays} days`);
+      } else {
+        // Single-day booking
+        setIsMultiDay(false);
+        setTotalDays(1);
+        
+        // Set form values for single-day
+        setValue("is_multi_day", false);
+        setValue("total_days", 1);
+        
+        console.log('Single-day booking selected');
       }
       
-      // Continue to next step
-      setStep((s) => Math.min(s + 1, totalSteps));
-      return;
-    }
-
-    // ========== HANDLE MULTI-DAY DAY PROGRESSION ==========
-    if (isMultiDay && currentDayIndex < totalDays - 1) {
-      // Save current day's data
-      const currentDayData = getValues();
-      const updatedDays = [...daysData];
-      updatedDays[currentDayIndex] = {
-        ...updatedDays[currentDayIndex],
-        ...currentDayData,
-        day_number: currentDayIndex + 1,
-      };
-      setDaysData(updatedDays);
-      
-      // Move to next day
-      setCurrentDayIndex(currentDayIndex + 1);
-      console.log(`Moving to day ${currentDayIndex + 2} of ${totalDays}`);
-      
-      // Reset to first service selection step for next day (step 5)
+      // Continue to next step (always move forward)
       setStep(5);
       return;
     }
 
-    // Special handling for contact information step
+    // ========== HANDLE MULTI-DAY DAY PROGRESSION ==========
+    if (isMultiDay && step >= 5) {
+      const baseSteps = 4;
+      const stepsPerDay = 3;
+      const totalDaySteps = totalDays * stepsPerDay;
+      const dayStepsEnd = baseSteps + totalDaySteps;
+      
+      // Check if we're in day configuration range
+      if (step >= 5 && step <= dayStepsEnd) {
+        const relativeStep = step - baseSteps - 1; // 0-indexed
+        const dayNumber = Math.floor(relativeStep / stepsPerDay);
+        const subStep = relativeStep % stepsPerDay;
+        
+        console.log(`Multi-day progress: Day ${dayNumber + 1}, Sub-step ${subStep + 1}/3, Step ${step}`);
+        
+        // Save current day's data from the form (for multi-day fields)
+        const formData = getValues();
+        const updatedDays = [...daysData];
+        
+        // Extract day-specific data from days array in form
+        if (formData.days && formData.days[dayNumber]) {
+          updatedDays[dayNumber] = {
+            ...updatedDays[dayNumber],
+            ...formData.days[dayNumber],
+            day_number: dayNumber + 1,
+          };
+          setDaysData(updatedDays);
+          console.log(`Saved data for Day ${dayNumber + 1}:`, updatedDays[dayNumber]);
+        }
+        
+        // If completing last sub-step (Party/Addons), mark day as completed
+        if (subStep === 2) {
+          if (!completedDays.includes(dayNumber)) {
+            setCompletedDays([...completedDays, dayNumber]);
+            console.log(`✓ Day ${dayNumber + 1} marked as completed`);
+          }
+          
+          // Update current day index to next day
+          if (dayNumber < totalDays - 1) {
+            setCurrentDayIndex(dayNumber + 1);
+            console.log(`→ Moving to Day ${dayNumber + 2}`);
+          } else {
+            // All days completed, ready for final steps
+            console.log('✓ All days completed! Moving to final steps.');
+          }
+        }
+        
+        // Move to next step
+        setStep((s) => s + 1);
+        console.log(`→ Moving from step ${step} to step ${step + 1}`);
+        return;
+      }
+    }
+
+    // Special handling for contact information step (SINGLE-DAY ONLY)
     const region = getValues("region");
-    const isContactStep =
+    const isContactStep = !isMultiDay && (
       (serviceType === "Non-Bridal" && step === 7) ||
       (serviceType === "Bridal" && step === 8) ||
       (serviceType === "Semi-Bridal" && step === 8) ||
-      (region === "Destination Wedding" && step === 5);
+      (region === "Destination Wedding" && step === 5)
+    );
 
-    console.log("Is contact step:", isContactStep, "Region:", region);
+    console.log("Is contact step:", isContactStep, "Region:", region, "isMultiDay:", isMultiDay);
 
+    if (isContactStep) {
+      console.log("Contact step detected - skipping booking creation, will create after ClientDetails");
+      // Just move to next step (ClientDetails) without creating booking
+      // Booking will be created after contact details are filled
+      setStep((s) => Math.min(s + 1, totalSteps));
+      return;
+    }
+
+    // DISABLED OLD CONTACT STEP BOOKING CREATION
+    // The booking should only be created AFTER ClientDetails is filled
+    /*
     if (isContactStep) {
       console.log("Contact step detected, making API call...");
       try {
@@ -806,13 +861,44 @@ export default function App() {
         return;
       }
     }
+    */ // END OF DISABLED CONTACT STEP BOOKING CREATION
 
     // Generate quote before payment step
-    const isQuoteStep =
-      (serviceType === "Bridal" && step === 8) ||
-      (serviceType === "Semi-Bridal" && step === 8);
+    // serviceType is already declared at the top of onNext function
+    
+    // Calculate which step needs quote generation
+    let isQuoteStep = false;
+    
+    console.log("🔍 Checking if quote step...");
+    console.log(`   - isMultiDay: ${isMultiDay}`);
+    console.log(`   - serviceType: ${serviceType}`);
+    console.log(`   - current step: ${step}`);
+    
+    if (isMultiDay) {
+      // For multi-day bookings, generate quote after ClientDetails
+      const baseSteps = 4;
+      const stepsPerDay = 3;
+      const totalDaySteps = totalDays * stepsPerDay;
+      const clientDetailsStep = baseSteps + totalDaySteps + 1;
+      
+      isQuoteStep = step === clientDetailsStep; // Generate quote when leaving ClientDetails
+    } else {
+      // For single-day bookings - generate quote AFTER ClientDetails (step 9)
+      // Changed from step 8 to step 9 because ClientDetails now comes at step 9
+      isQuoteStep = 
+        (serviceType === "Bridal" && step === 9) ||
+        (serviceType === "Semi-Bridal" && step === 9) ||
+        (serviceType === "Non-Bridal" && step === 9);
+    }
+    
+    console.log(`   → isQuoteStep result: ${isQuoteStep}`);
 
     if (isQuoteStep) {
+      console.log("🎯 QUOTE STEP DETECTED!");
+      console.log(`   - isMultiDay: ${isMultiDay}`);
+      console.log(`   - serviceType: ${serviceType}`);
+      console.log(`   - current step: ${step}`);
+      
       const data = getValues();
       console.log(
         "🔍 Frontend: Quote data being sent:",
@@ -823,8 +909,51 @@ export default function App() {
         data.needs_hijab_setting
       );
       
+      let quoteResponse;
+      
       // ========== MULTI-DAY QUOTE GENERATION ==========
       if (isMultiDay) {
+        console.log("🔍 Generating multi-day quote...");
+        
+        // First, create/save the booking
+        try {
+          const bookingData = {
+            ...(isEditMode && editingBookingId && { unique_id: editingBookingId }),
+            is_multi_day: true,
+            total_days: totalDays,
+            days: daysData,
+            name: `${data.first_name || ""} ${data.last_name || ""}`.trim(),
+            email: data.email,
+            phone: data.phone,
+            region: data.region,
+            subRegion: data.subRegion,
+            service_type: data.service_type,
+            service_mode: data.service_mode,
+          };
+          
+          console.log("🔍 Saving multi-day booking:", bookingData);
+          
+          const bookingResponse = isEditMode && editingBookingId
+            ? await api.put(`/bookings/${editingBookingId}`, bookingData)
+            : await api.post("/bookings", bookingData);
+          
+          const bookingId = bookingResponse.data.booking_id || bookingResponse.data.unique_id;
+          console.log("✓ Booking saved, ID:", bookingId);
+          
+          // Store booking ID
+          if (bookingId) {
+            setValue("booking_id", bookingId);
+          }
+        } catch (error) {
+          console.error("Failed to save multi-day booking:", error);
+          window.showToast(
+            "Failed to save booking. Please try again.",
+            "error"
+          );
+          return;
+        }
+        
+        // Then generate the quote
         const multiDayQuoteData = {
           ...data,
           is_multi_day: true,
@@ -832,21 +961,185 @@ export default function App() {
           days: daysData,
         };
         
-        const r = await api.post("/quote/multi-day", multiDayQuoteData);
-        console.log("🔍 Frontend: Multi-day quote response:", r.data);
-        setQuote(r.data);
-        setValue("pricing.quote_total", r.data.quote_total);
-        setValue("pricing.deposit_amount", r.data.deposit_amount);
-        setValue("pricing.remaining_amount", r.data.remaining_amount);
-        setValue("multi_day_discount", r.data.multi_day_discount || 0);
+        try {
+          // Use regular /quote endpoint with multi-day data
+          // Backend should detect is_multi_day flag and handle accordingly
+          quoteResponse = await api.post("/quote", multiDayQuoteData);
+          console.log("🔍 Frontend: Multi-day quote response:", quoteResponse.data);
+          setQuote(quoteResponse.data);
+          setValue("pricing.quote_total", quoteResponse.data.quote_total);
+          setValue("pricing.deposit_amount", quoteResponse.data.deposit_amount);
+          setValue("pricing.remaining_amount", quoteResponse.data.remaining_amount);
+          if (quoteResponse.data.multi_day_discount) {
+            setValue("multi_day_discount", quoteResponse.data.multi_day_discount);
+          }
+        } catch (error) {
+          console.error("Failed to generate multi-day quote:", error);
+          console.warn("⚠️ Continuing without quote - will need to be calculated later");
+          
+          // Set default quote values to allow progression
+          const defaultQuote = {
+            quote_total: 0,
+            deposit_amount: 0,
+            remaining_amount: 0,
+          };
+          setQuote(defaultQuote);
+          setValue("pricing.quote_total", 0);
+          setValue("pricing.deposit_amount", 0);
+          setValue("pricing.remaining_amount", 0);
+          
+          // Don't return - allow progression to next step
+          // The quote can be calculated on the quote review page
+        }
       } else {
-        // ========== SINGLE-DAY QUOTE (ORIGINAL) ==========
-        const r = await api.post("/quote", data);
-        console.log("🔍 Frontend: Quote response:", r.data);
-        setQuote(r.data);
-        setValue("pricing.quote_total", r.data.quote_total);
-        setValue("pricing.deposit_amount", r.data.deposit_amount);
-        setValue("pricing.remaining_amount", r.data.remaining_amount);
+        // ========== SINGLE-DAY BOOKING & QUOTE ==========
+        console.log("🔍 Creating single-day booking and generating quote...");
+        
+        // First, create/save the booking with contact details
+        try {
+          const bookingData = {
+            ...(isEditMode && editingBookingId && { unique_id: editingBookingId }),
+            is_multi_day: false,
+            total_days: 1,
+            name: `${data.first_name || ""} ${data.last_name || ""}`.trim(),
+            email: data.email,
+            phone: data.phone,
+            region: data.region,
+            subRegion: data.subRegion,
+            service_type: data.service_type,
+            service_mode: data.service_mode,
+            event_date: data.event_date,
+            ready_time: data.ready_time || data.service_time,
+            bride_service: data.bride_service,
+            needs_trial: data.needs_trial,
+            needs_jewelry: data.needs_jewelry,
+            needs_extensions: data.needs_extensions,
+            needs_saree_draping: data.needs_saree_draping,
+            needs_hijab_setting: data.needs_hijab_setting,
+            has_party_members: data.has_party_members,
+            party_both_count: data.party_both_count || 0,
+            party_makeup_count: data.party_makeup_count || 0,
+            party_hair_count: data.party_hair_count || 0,
+            has_airbrush: data.has_airbrush,
+            airbrush_count: data.airbrush_count || 0,
+          };
+          
+          console.log("🔍 Saving single-day booking:", bookingData);
+          
+          const bookingResponse = isEditMode && editingBookingId
+            ? await api.put(`/bookings/${editingBookingId}`, bookingData)
+            : await api.post("/bookings", bookingData);
+          
+          const bookingId = bookingResponse.data.booking_id || bookingResponse.data.unique_id;
+          console.log("✓ Booking saved, ID:", bookingId);
+          
+          // Store booking ID
+          if (bookingId) {
+            setValue("booking_id", bookingId);
+          }
+        } catch (error) {
+          console.error("Failed to save single-day booking:", error);
+          window.showToast(
+            "Failed to save booking. Please try again.",
+            "error"
+          );
+          return;
+        }
+        
+        // Then generate the quote
+        try {
+          console.log("🔍 Sending quote request with data:", {
+            service_type: data.service_type,
+            bride_service: data.bride_service,
+            needs_trial: data.needs_trial,
+            needs_jewelry: data.needs_jewelry,
+            needs_extensions: data.needs_extensions,
+            needs_saree_draping: data.needs_saree_draping,
+            needs_hijab_setting: data.needs_hijab_setting,
+            has_party_members: data.has_party_members,
+            party_both_count: data.party_both_count,
+            party_makeup_count: data.party_makeup_count,
+            party_hair_count: data.party_hair_count,
+          });
+          
+          quoteResponse = await api.post("/quote", data);
+          console.log("🔍 Frontend: Quote response:", quoteResponse.data);
+          
+          // Always calculate both packages on frontend for display
+          console.log("🔍 Calculating both pricing packages (Lead and Team)...");
+          
+          // Import pricing calculation
+          const { calculateBookingPrice } = await import('./lib/pricing.js');
+          
+          // Calculate with Lead artist (Anum)
+          const leadPricing = calculateBookingPrice(data, 'Lead');
+          console.log("🔍 Lead (Anum) pricing:", leadPricing);
+          
+          // Calculate with Team artist
+          const teamPricing = calculateBookingPrice(data, 'Team');
+          console.log("🔍 Team pricing:", teamPricing);
+          
+          // Create package objects for both options
+          const packages = {
+            lead: leadPricing ? {
+              subtotal: leadPricing.subtotal,
+              travel_fee: 0,
+              early_fee: 0,
+              subtotal_with_fees: leadPricing.subtotal,
+              gst: leadPricing.hst,
+              pst: 0,
+              total_tax: leadPricing.hst,
+              quote_total: leadPricing.total,
+              deposit_amount: leadPricing.deposit,
+              remaining_amount: leadPricing.total - leadPricing.deposit,
+              services: leadPricing.services,
+              artist: 'Lead',
+              artist_name: 'Anum (Lead Artist)',
+            } : null,
+            team: teamPricing ? {
+              subtotal: teamPricing.subtotal,
+              travel_fee: 0,
+              early_fee: 0,
+              subtotal_with_fees: teamPricing.subtotal,
+              gst: teamPricing.hst,
+              pst: 0,
+              total_tax: teamPricing.hst,
+              quote_total: teamPricing.total,
+              deposit_amount: teamPricing.deposit,
+              remaining_amount: teamPricing.total - teamPricing.deposit,
+              services: teamPricing.services,
+              artist: 'Team',
+              artist_name: 'Team Artist',
+            } : null,
+          };
+          
+          console.log("✅ Both packages calculated:", packages);
+          
+          // Store both packages in quote state
+          setQuote(packages);
+          
+          // Use Team pricing as default for form values
+          if (teamPricing) {
+            setValue("pricing.quote_total", teamPricing.total);
+            setValue("pricing.deposit_amount", teamPricing.deposit);
+            setValue("pricing.remaining_amount", teamPricing.total - teamPricing.deposit);
+          }
+        } catch (error) {
+          console.error("Failed to generate quote:", error);
+          console.error("Quote error response:", error.response?.data);
+          console.warn("⚠️ Continuing without quote - will need to be calculated later");
+          
+          // Set default quote values to allow progression
+          const defaultQuote = {
+            quote_total: 0,
+            deposit_amount: 0,
+            remaining_amount: 0,
+          };
+          setQuote(defaultQuote);
+          setValue("pricing.quote_total", 0);
+          setValue("pricing.deposit_amount", 0);
+          setValue("pricing.remaining_amount", 0);
+        }
       }
 
       // If booking already exists, update it with pricing information
@@ -854,8 +1147,8 @@ export default function App() {
         try {
           await api.patch(`/bookings/${data.booking_id}/pricing`, {
             pricing: {
-              quote_total: r.data.quote_total,
-              deposit_amount: r.data.deposit_amount,
+              quote_total: quoteResponse.data.quote_total,
+              deposit_amount: quoteResponse.data.deposit_amount,
               deposit_percentage: 30,
               remaining_amount: r.data.remaining_amount,
               amount_paid: 0,
@@ -868,7 +1161,12 @@ export default function App() {
       }
     }
 
-    setStep((s) => Math.min(s + 1, totalSteps));
+    console.log(`📊 Before step increment: current step = ${step}, totalSteps = ${totalSteps}`);
+    setStep((s) => {
+      const nextStep = Math.min(s + 1, totalSteps);
+      console.log(`→ Moving from step ${s} to step ${nextStep}`);
+      return nextStep;
+    });
   };
 
   const onPrev = () => setStep((s) => Math.max(1, s - 1));
@@ -1075,8 +1373,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen  py-8">
-      <div className="max-w-6xl mx-auto px-2 sm:px-6">
+    <div className="min-h-screen py-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-6">
         {/* Edit Booking Lookup */}
         {showEditLookup && (
           <EditBookingLookup
@@ -1099,26 +1397,33 @@ export default function App() {
               daysData={daysData}
             />
 
-            {/* Day Navigator for Multi-Day Bookings */}
-            {isMultiDay && totalDays > 1 && (
-              <div className="mb-6">
-                <DayNavigator
-                  daysData={daysData}
-                  totalDays={totalDays}
-                  currentDayIndex={currentDayIndex}
-                  onDayClick={(dayIndex) => {
-                    // Navigate to the day's first step
-                    const baseSteps = 4;
-                    const stepsPerDay = 3;
-                    const targetStep = baseSteps + 1 + (dayIndex * stepsPerDay);
-                    setStep(targetStep);
-                    setCurrentDayIndex(dayIndex);
-                  }}
-                />
-              </div>
-            )}
+            {/* Two-Column Layout for Multi-Day Bookings */}
+            <div className={isMultiDay && totalDays > 1 && step > 4 ? "flex gap-6" : ""}>
+              {/* Day Navigator Sidebar - Only show after step 4 */}
+              {isMultiDay && totalDays > 1 && step > 4 && (
+                <div className="w-80 flex-shrink-0">
+                  <div className="sticky top-8">
+                    <DayNavigator
+                      daysData={daysData}
+                      totalDays={totalDays}
+                      currentDayIndex={currentDayIndex}
+                      completedDays={completedDays}
+                      onDayClick={(dayIndex) => {
+                        // Navigate to the day's first step
+                        const baseSteps = 4;
+                        const stepsPerDay = 3;
+                        const targetStep = baseSteps + 1 + (dayIndex * stepsPerDay);
+                        setStep(targetStep);
+                        setCurrentDayIndex(dayIndex);
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
 
-            {/* Edit Button */}
+              {/* Main Content Area */}
+              <div className="flex-1 min-w-0">
+                {/* Edit Button */}
             
 
             {/* Payment Screenshot Upload Section */}
@@ -1236,6 +1541,205 @@ export default function App() {
                   />
                 )}
 
+                {/* Multi-Day Flow: Day Configuration Steps */}
+                {isMultiDay && step >= 5 && (() => {
+                  const baseSteps = 4;
+                  const stepsPerDay = 3; // DateTimeSelection, ServiceSelection, Party/Addons
+                  const totalDaySteps = totalDays * stepsPerDay;
+                  const dayStepsEnd = baseSteps + totalDaySteps;
+                  
+                  // Check if we're in day configuration range
+                  if (step >= 5 && step <= dayStepsEnd) {
+                    const relativeStep = step - baseSteps - 1; // 0-indexed
+                    const dayNumber = Math.floor(relativeStep / stepsPerDay);
+                    const subStep = relativeStep % stepsPerDay;
+                    
+                    const serviceType = getValues("service_type");
+                    
+                    // Sub-step 0: Date/Time + Event Name for this day
+                    if (subStep === 0) {
+                      return (
+                        <DayConfiguration
+                          key={`day-${dayNumber}-datetime`}
+                          dayNumber={dayNumber}
+                          totalDays={totalDays}
+                          daysData={daysData}
+                          currentDayIndex={dayNumber}
+                        >
+                          <DateTimeSelection
+                            onNext={onNext}
+                            onBack={onPrev}
+                            register={register}
+                            setValue={setValue}
+                            getValues={getValues}
+                            errors={errors}
+                            dayNumber={dayNumber}
+                          />
+                        </DayConfiguration>
+                      );
+                    }
+                    
+                    // Sub-step 1: Service Selection for this day
+                    if (subStep === 1) {
+                      return (
+                        <DayConfiguration
+                          key={`day-${dayNumber}-service`}
+                          dayNumber={dayNumber}
+                          totalDays={totalDays}
+                          daysData={daysData}
+                          currentDayIndex={dayNumber}
+                        >
+                          {serviceType === 'Bridal' && (
+                            <BrideServiceSelection
+                              onNext={onNext}
+                              onBack={onPrev}
+                              register={register}
+                              watch={watch}
+                              setValue={setValue}
+                              errors={errors}
+                              dayNumber={dayNumber}
+                            />
+                          )}
+                          {serviceType === 'Semi-Bridal' && (
+                            <SemiBridalServiceSelection
+                              onNext={onNext}
+                              onBack={onPrev}
+                              register={register}
+                              watch={watch}
+                              setValue={setValue}
+                              errors={errors}
+                              dayNumber={dayNumber}
+                            />
+                          )}
+                          {serviceType === 'Non-Bridal' && (
+                            <NonBridalServiceSelection
+                              onNext={onNext}
+                              onBack={onPrev}
+                              register={register}
+                              watch={watch}
+                              setValue={setValue}
+                              errors={errors}
+                              dayNumber={dayNumber}
+                            />
+                          )}
+                        </DayConfiguration>
+                      );
+                    }
+                    
+                    // Sub-step 2: Party & Addons for this day
+                    if (subStep === 2) {
+                      return (
+                        <DayConfiguration
+                          key={`day-${dayNumber}-party`}
+                          dayNumber={dayNumber}
+                          totalDays={totalDays}
+                          daysData={daysData}
+                          currentDayIndex={dayNumber}
+                        >
+                          <div className="space-y-8">
+                            {serviceType === 'Bridal' && (
+                              <>
+                                <BridalParty
+                                  onNext={onNext}
+                                  onBack={onPrev}
+                                  register={register}
+                                  watch={watch}
+                                  setValue={setValue}
+                                  errors={errors}
+                                  dayNumber={dayNumber}
+                                />
+                                <BrideAddons
+                                  onNext={onNext}
+                                  onBack={onPrev}
+                                  register={register}
+                                  watch={watch}
+                                  setValue={setValue}
+                                  errors={errors}
+                                  dayNumber={dayNumber}
+                                />
+                              </>
+                            )}
+                            {serviceType === 'Semi-Bridal' && (
+                              <>
+                                <SemiBridalParty
+                                  onNext={onNext}
+                                  onBack={onPrev}
+                                  register={register}
+                                  watch={watch}
+                                  setValue={setValue}
+                                  errors={errors}
+                                  dayNumber={dayNumber}
+                                />
+                                <SemiBridalAddons
+                                  onNext={onNext}
+                                  onBack={onPrev}
+                                  register={register}
+                                  watch={watch}
+                                  setValue={setValue}
+                                  errors={errors}
+                                  dayNumber={dayNumber}
+                                />
+                              </>
+                            )}
+                            {serviceType === 'Non-Bridal' && (
+                              <NonBridalBreakdown
+                                onNext={onNext}
+                                onBack={onPrev}
+                                register={register}
+                                watch={watch}
+                                setValue={setValue}
+                                errors={errors}
+                                dayNumber={dayNumber}
+                              />
+                            )}
+                          </div>
+                        </DayConfiguration>
+                      );
+                    }
+                  }
+                  
+                  return null;
+                })()}
+
+                {/* Multi-Day: Client Details (after all days completed) */}
+                {isMultiDay && (() => {
+                  const baseSteps = 4;
+                  const stepsPerDay = 3;
+                  const totalDaySteps = totalDays * stepsPerDay;
+                  const clientDetailsStep = baseSteps + totalDaySteps + 1;
+                  const quoteReviewStep = baseSteps + totalDaySteps + 2;
+                  
+                  if (step === clientDetailsStep) {
+                    return (
+                      <ClientDetails
+                        onNext={onNext}
+                        onBack={onPrev}
+                        register={register}
+                        setValue={setValue}
+                        errors={errors}
+                        handleSubmit={handleSubmit}
+                        watch={watch}
+                        getValues={getValues}
+                      />
+                    );
+                  }
+                  
+                  if (step === quoteReviewStep) {
+                    return (
+                      <MultiDayQuoteReview
+                        onNext={onNext}
+                        onBack={onPrev}
+                        getValues={getValues}
+                        daysData={daysData}
+                        totalDays={totalDays}
+                        quote={quote}
+                      />
+                    );
+                  }
+                  
+                  return null;
+                })()}
+
                 {step === 5 && !isMultiDay && (
                   <EventDetailsStep
                     onNext={onNext}
@@ -1300,7 +1804,14 @@ export default function App() {
                         />
                       )}
 
-                      {/* Steps 9-10 hidden for Bridal - flow stops at contact info */}
+                      {step === 10 && !isMultiDay && (
+                        <QuoteReview
+                          onNext={onNext}
+                          onBack={onPrev}
+                          getValues={getValues}
+                          quote={quote}
+                        />
+                      )}
                     </>
                   )}
 
@@ -1355,7 +1866,15 @@ export default function App() {
                           />
                         )}
 
-                      {/* Steps 9-10 hidden for Semi-Bridal - flow stops at contact info */}
+                      {step === 10 && !isMultiDay &&
+                        getValues("service_type") === "Semi-Bridal" && (
+                          <QuoteReview
+                            onNext={onNext}
+                            onBack={onPrev}
+                            getValues={getValues}
+                            quote={quote}
+                          />
+                        )}
                     </>
                   )}
 
@@ -1832,6 +2351,10 @@ export default function App() {
                   )}
               </>
             )}
+              </div>
+              {/* End of Main Content Area */}
+            </div>
+            {/* End of Two-Column Layout */}
           </>
         )}
       </div>

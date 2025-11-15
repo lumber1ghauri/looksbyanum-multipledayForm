@@ -47,22 +47,22 @@ const DatePicker = ({
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  // Base styling that matches the DARK MODE / ROSE GLOW design system
+  // Base styling that matches the light theme design system
   const baseStyles = `
-  w-full px-4 py-2 md:px-5 md:py-3 rounded-xl 
-  transition-all duration-200 cursor-pointer text-neutral-200 
-  bg-neutral-900 border border-neutral-700
-  focus:outline-none focus:ring-2 focus:ring-rose-500/50 focus:border-rose-500
-  ${error ? "border-red-700 focus:border-red-700 focus:ring-red-500/50" : ""}
+  w-full px-4 py-2 md:px-5 md:py-3 rounded-lg 
+  transition-all duration-200 cursor-pointer text-gray-900 
+  bg-white border border-gray-300
+  focus:outline-none focus:ring-2 focus:ring-gray-700 focus:border-gray-700
+  ${error ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
   ${className}
  `;
 
   return (
     <div>
       {label && (
-        <label className="block text-sm md:text-base font-light text-white mb-2">
+        <label className="block text-sm md:text-base font-semibold text-gray-800 mb-2">
           {label}
-          {required && <span className="text-gray-400 ml-1">*</span>}
+          {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
 
@@ -78,7 +78,7 @@ const DatePicker = ({
         {...props}
       />
 
-      {error && <p className="mt-1 text-sm text-gray-300 font-light">{error}</p>}
+      {error && <p className="mt-1 text-sm text-red-600 font-normal">{error}</p>}
     </div>
   );
 };

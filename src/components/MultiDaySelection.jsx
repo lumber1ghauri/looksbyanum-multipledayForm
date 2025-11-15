@@ -39,9 +39,9 @@ export default function MultiDaySelection({ register, setValue, watch, errors, o
           <button
             type="button"
             onClick={() => handleModeChange('single')}
-            className={`p-6 border-2 rounded-lg transition-all text-left ${
+            className={`p-6 border-2 rounded-lg transition-all text-left bg-white ${
               selectedMode === 'single'
-                ? 'border-gray-700 bg-gray-50 shadow-md'
+                ? 'border-gray-700 shadow-md'
                 : 'border-gray-200 hover:border-gray-400'
             }`}
           >
@@ -93,9 +93,9 @@ export default function MultiDaySelection({ register, setValue, watch, errors, o
           <button
             type="button"
             onClick={() => handleModeChange('multi')}
-            className={`p-6 border-2 rounded-lg transition-all text-left ${
+            className={`p-6 border-2 rounded-lg transition-all text-left bg-white ${
               selectedMode === 'multi'
-                ? 'border-gray-700 bg-gray-50 shadow-md'
+                ? 'border-gray-700 shadow-md'
                 : 'border-gray-200 hover:border-gray-400'
             }`}
           >
@@ -253,9 +253,9 @@ export default function MultiDaySelection({ register, setValue, watch, errors, o
           <button
             type="button"
             onClick={onBack}
-            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors duration-200"
+            className="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors duration-200"
           >
-            ← Back
+            Back
           </button>
           
           <button
@@ -264,11 +264,11 @@ export default function MultiDaySelection({ register, setValue, watch, errors, o
             disabled={!selectedMode}
             className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
               selectedMode
-                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-lg hover:scale-[1.02]'
+                ? 'bg-gray-800 text-white hover:bg-gray-900'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
-            Continue to {selectedMode === 'multi' ? `Day 1 Configuration` : 'Event Details'} →
+            Continue
           </button>
         </div>
       </div>
