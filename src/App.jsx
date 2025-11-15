@@ -412,9 +412,16 @@ export default function App() {
           booking_id: bookingData.booking_id,
         });
 
+        // Send confirmation email with quote data
+        const emailPayload = {
+          ...bookingData,
+          lead_quote: quote?.lead || {},
+          team_quote: quote?.team || {},
+        };
+
         // Send confirmation email
         api
-          .post("/bookings/send-confirmation", bookingData)
+          .post("/bookings/send-confirmation", emailPayload)
           .then((response) => {
             console.log(
               "Booking confirmation email sent successfully:",
