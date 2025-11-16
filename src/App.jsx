@@ -47,11 +47,10 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE);
 
 // Create API client with base URL
 const api = axios.create({
-  baseURL:
-    import.meta.env.VITE_API_URL || "https://looksbyanum-saqib.vercel.app/api/",
+  baseURL: "/api", // Use new backend API
 });
 
-console.log("baseURL test", api)
+console.log("Using API baseURL:", api.defaults.baseURL)
 
 export default function App() {
   const [step, setStep] = useState(1);
@@ -938,27 +937,24 @@ export default function App() {
             service_mode: data.service_mode,
           };
           
-          console.log("🔍 Multi-day booking data prepared:", bookingData);
+          console.log("� Saving multi-day booking to backend...", bookingData);
           
-          // TODO: Enable when backend API is ready
-          // const bookingResponse = isEditMode && editingBookingId
-          //   ? await api.put(`/bookings/${editingBookingId}`, bookingData)
-          //   : await api.post("/bookings", bookingData);
-          // const bookingId = bookingResponse.data.booking_id || bookingResponse.data.unique_id;
-          // console.log("✓ Booking saved, ID:", bookingId);
+          const bookingResponse = isEditMode && editingBookingId
+            ? await api.put(`/bookings/${editingBookingId}`, bookingData)
+            : await api.post("/bookings", bookingData);
           
-          // Generate temporary booking ID
-          const bookingId = `TEMP-MULTI-${Date.now()}`;
-          console.log("✓ Temporary booking ID generated:", bookingId);
+          const bookingId = bookingResponse.data.booking_id || bookingResponse.data.unique_id;
+          console.log("✅ Multi-day booking saved successfully, ID:", bookingId);
           
           // Store booking ID
           if (bookingId) {
             setValue("booking_id", bookingId);
+            window.showToast("Multi-day booking saved: " + bookingId, "success");
           }
         } catch (error) {
-          console.error("Failed to prepare multi-day booking:", error);
+          console.error("Failed to save multi-day booking:", error);
           window.showToast(
-            "Failed to prepare booking. Please try again.",
+            "Failed to save booking. Please try again.",
             "error"
           );
           return;
@@ -1034,27 +1030,24 @@ export default function App() {
             airbrush_count: data.airbrush_count || 0,
           };
           
-          console.log("🔍 Single-day booking data prepared:", bookingData);
+          console.log("� Saving single-day booking to backend...", bookingData);
           
-          // TODO: Enable when backend API is ready
-          // const bookingResponse = isEditMode && editingBookingId
-          //   ? await api.put(`/bookings/${editingBookingId}`, bookingData)
-          //   : await api.post("/bookings", bookingData);
-          // const bookingId = bookingResponse.data.booking_id || bookingResponse.data.unique_id;
-          // console.log("✓ Booking saved, ID:", bookingId);
+          const bookingResponse = isEditMode && editingBookingId
+            ? await api.put(`/bookings/${editingBookingId}`, bookingData)
+            : await api.post("/bookings", bookingData);
           
-          // Generate temporary booking ID
-          const bookingId = `TEMP-SINGLE-${Date.now()}`;
-          console.log("✓ Temporary booking ID generated:", bookingId);
+          const bookingId = bookingResponse.data.booking_id || bookingResponse.data.unique_id;
+          console.log("✅ Single-day booking saved successfully, ID:", bookingId);
           
           // Store booking ID
           if (bookingId) {
             setValue("booking_id", bookingId);
+            window.showToast("Booking saved: " + bookingId, "success");
           }
         } catch (error) {
-          console.error("Failed to prepare single-day booking:", error);
+          console.error("Failed to save single-day booking:", error);
           window.showToast(
-            "Failed to prepare booking. Please try again.",
+            "Failed to save booking. Please try again.",
             "error"
           );
           return;
@@ -1233,15 +1226,13 @@ export default function App() {
         },
       };
 
-      // TODO: Enable when backend API is ready
-      // const r = await api.post("/bookings", bookingData);
-      // window.showToast("Saved booking: " + r.data.booking_id, "success");
-      // setValue("booking_id", r.data.booking_id);
-
-      // Generate a temporary booking ID for now
-      const tempBookingId = `TEMP-${Date.now()}`;
-      setValue("booking_id", tempBookingId);
-      console.log("Temporary booking ID generated:", tempBookingId);
+      // Save booking to backend
+      console.log("💾 Saving booking to backend...", bookingData);
+      const r = await api.post("/bookings", bookingData);
+      console.log("✅ Booking saved successfully:", r.data);
+      
+      window.showToast("Booking saved: " + r.data.booking_id, "success");
+      setValue("booking_id", r.data.booking_id);
 
       // For destination weddings, show confirmation and stop the flow
       if (region === "Destination Wedding") {

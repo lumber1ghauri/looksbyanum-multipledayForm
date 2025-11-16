@@ -1,4 +1,6 @@
 // Vercel Serverless Function for Sending Confirmation Emails
+import { Resend } from 'resend';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -143,23 +145,27 @@ export default async function handler(req, res) {
         </html>
       `;
 
-      // TODO: Integrate with actual email service
-      // For now, just log the email content
-      console.log('📧 Email HTML generated (not sent - needs email service integration)');
-      console.log('To enable email sending, integrate with Resend, SendGrid, or AWS SES');
+      // Send email using Resend
+      console.log('📧 Sending email via Resend...');
       
-      // Example with Resend (uncomment when ready):
-      /*
-      const { Resend } = require('resend');
       const resend = new Resend(process.env.RESEND_API_KEY);
       
-      await resend.emails.send({
-        from: 'Looks By Anum <bookings@looksbyanum.com>',
+      const { data, error } = await resend.emails.send({
+        from: 'Looks By Anum <onboarding@resend.dev>', // Use verified domain or resend.dev for testing
         to: bookingData.email,
         subject: `Booking Confirmation - ${bookingData.service_type} Service`,
         html: emailHtml,
       });
-      */
+
+      if (error) {
+        console.error('❌ Resend email error:', error);
+        return res.status(400).json({
+          success: false,
+          error: error.message,
+        });
+      }
+
+      console.log('✅ Email sent successfully via Resend:', data);
 
       return res.status(200).json({
         success: true,
