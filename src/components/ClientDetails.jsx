@@ -130,6 +130,17 @@ export default function ClientDetails({
                 (validationErrors) => {
                   console.error("❌ Form validation failed:", validationErrors);
                   console.error("❌ Error fields:", Object.keys(validationErrors));
+                  console.error("❌ Full error details:", JSON.stringify(validationErrors, null, 2));
+                  
+                  // Log specific days errors if present
+                  if (validationErrors.days) {
+                    console.error("❌ Days errors:", validationErrors.days);
+                    validationErrors.days.forEach((dayError, index) => {
+                      if (dayError) {
+                        console.error(`❌ Day ${index + 1} errors:`, dayError);
+                      }
+                    });
+                  }
                   setIsSubmitting(false);
                 }
               )();
