@@ -938,23 +938,27 @@ export default function App() {
             service_mode: data.service_mode,
           };
           
-          console.log("🔍 Saving multi-day booking:", bookingData);
+          console.log("🔍 Multi-day booking data prepared:", bookingData);
           
-          const bookingResponse = isEditMode && editingBookingId
-            ? await api.put(`/bookings/${editingBookingId}`, bookingData)
-            : await api.post("/bookings", bookingData);
+          // TODO: Enable when backend API is ready
+          // const bookingResponse = isEditMode && editingBookingId
+          //   ? await api.put(`/bookings/${editingBookingId}`, bookingData)
+          //   : await api.post("/bookings", bookingData);
+          // const bookingId = bookingResponse.data.booking_id || bookingResponse.data.unique_id;
+          // console.log("✓ Booking saved, ID:", bookingId);
           
-          const bookingId = bookingResponse.data.booking_id || bookingResponse.data.unique_id;
-          console.log("✓ Booking saved, ID:", bookingId);
+          // Generate temporary booking ID
+          const bookingId = `TEMP-MULTI-${Date.now()}`;
+          console.log("✓ Temporary booking ID generated:", bookingId);
           
           // Store booking ID
           if (bookingId) {
             setValue("booking_id", bookingId);
           }
         } catch (error) {
-          console.error("Failed to save multi-day booking:", error);
+          console.error("Failed to prepare multi-day booking:", error);
           window.showToast(
-            "Failed to save booking. Please try again.",
+            "Failed to prepare booking. Please try again.",
             "error"
           );
           return;
@@ -967,7 +971,6 @@ export default function App() {
           total_days: totalDays,
           days: daysData,
         };
-        
         try {
           // Use regular /quote endpoint with multi-day data
           // Backend should detect is_multi_day flag and handle accordingly
@@ -1031,23 +1034,27 @@ export default function App() {
             airbrush_count: data.airbrush_count || 0,
           };
           
-          console.log("🔍 Saving single-day booking:", bookingData);
+          console.log("🔍 Single-day booking data prepared:", bookingData);
           
-          const bookingResponse = isEditMode && editingBookingId
-            ? await api.put(`/bookings/${editingBookingId}`, bookingData)
-            : await api.post("/bookings", bookingData);
+          // TODO: Enable when backend API is ready
+          // const bookingResponse = isEditMode && editingBookingId
+          //   ? await api.put(`/bookings/${editingBookingId}`, bookingData)
+          //   : await api.post("/bookings", bookingData);
+          // const bookingId = bookingResponse.data.booking_id || bookingResponse.data.unique_id;
+          // console.log("✓ Booking saved, ID:", bookingId);
           
-          const bookingId = bookingResponse.data.booking_id || bookingResponse.data.unique_id;
-          console.log("✓ Booking saved, ID:", bookingId);
+          // Generate temporary booking ID
+          const bookingId = `TEMP-SINGLE-${Date.now()}`;
+          console.log("✓ Temporary booking ID generated:", bookingId);
           
           // Store booking ID
           if (bookingId) {
             setValue("booking_id", bookingId);
           }
         } catch (error) {
-          console.error("Failed to save single-day booking:", error);
+          console.error("Failed to prepare single-day booking:", error);
           window.showToast(
-            "Failed to save booking. Please try again.",
+            "Failed to prepare booking. Please try again.",
             "error"
           );
           return;
@@ -1226,11 +1233,15 @@ export default function App() {
         },
       };
 
-      const r = await api.post("/bookings", bookingData);
-      window.showToast("Saved booking: " + r.data.booking_id, "success");
+      // TODO: Enable when backend API is ready
+      // const r = await api.post("/bookings", bookingData);
+      // window.showToast("Saved booking: " + r.data.booking_id, "success");
+      // setValue("booking_id", r.data.booking_id);
 
-      // Store the booking_id in the form data for later use
-      setValue("booking_id", r.data.booking_id);
+      // Generate a temporary booking ID for now
+      const tempBookingId = `TEMP-${Date.now()}`;
+      setValue("booking_id", tempBookingId);
+      console.log("Temporary booking ID generated:", tempBookingId);
 
       // For destination weddings, show confirmation and stop the flow
       if (region === "Destination Wedding") {
