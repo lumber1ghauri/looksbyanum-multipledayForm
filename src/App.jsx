@@ -1233,7 +1233,20 @@ export default function App() {
     });
   };
 
-  const onPrev = () => setStep((s) => Math.max(1, s - 1));
+  const onPrev = () => {
+    // Reset email sent flag when going back from quote review steps
+    // This allows email to be sent again if user changes services and moves forward
+    const currentStep = step;
+    const isMultiDay = getValues("is_multi_day");
+    const isQuoteStep = (!isMultiDay && currentStep === 10) || (isMultiDay && currentStep === 12);
+    
+    if (isQuoteStep && confirmationEmailSent) {
+      console.log("Going back from quote review - resetting email flag");
+      setConfirmationEmailSent(false);
+    }
+    
+    setStep((s) => Math.max(1, s - 1));
+  };
 
   const onBook = async () => {
     const data = getValues();

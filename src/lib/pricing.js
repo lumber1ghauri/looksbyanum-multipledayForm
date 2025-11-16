@@ -141,6 +141,12 @@ export function calculateBookingPrice(booking, artist = "Team") {
   );
   if (!booking) return null;
 
+  // Check if this is a multi-day booking
+  if (booking.is_multi_day && booking.days && booking.days.length > 0) {
+    console.log("🔍 Multi-day booking detected, calculating for", booking.days.length, "days");
+    return calculateMultiDayBookingPrice(booking, artist);
+  }
+
   let subtotal = 0;
   const services = [];
   let travelFee = 0;
@@ -760,3 +766,156 @@ export function getDynamicPackages(booking) {
     },
   ];
 }
+
+/**
+ * Calculate multi-day discount based on number of days
+ * @param {number} totalDays - Number of days in the booking
+ * @returns {number} - Discount percentage (0-100)
+ */
+function getMultiDayDiscount(totalDays) {
+  if (totalDays >= 5) return 20; // 20% off for 5+ days
+  if (totalDays === 4) return 15; // 15% off for 4 days
+  if (totalDays === 3) return 10; // 10% off for 3 days
+  if (totalDays === 2) return 5;  // 5% off for 2 days
+  return 0; // No discount for single day
+}
+
+/**
+ * Calculate pricing for multi-day bookings
+ * @param {Object} booking - The multi-day booking data
+ * @param {string} artist - 'Lead' or 'Team'
+ * @returns {Object} - Pricing breakdown with multi-day discount
+ */
+function calculateMultiDayBookingPrice(booking, artist = "Team") {
+  console.log("🔍 Calculating multi-day pricing for", booking.days.length, "days with artist:", artist);
+  
+  let totalSubtotal = 0;
+  const allServices = [];
+  let totalTravelFee = 0;
+
+  // Calculate pricing for each day
+  booking.days.forEach((day, index) => {
+    console.log(`🔍 Processing Day ${index + 1}:`, day);
+    
+    // Create a single-day booking object for this day
+    const dayBooking = {
+      ...booking,
+      is_multi_day: false, // Prevent recursion
+      service_type: day.service_type || booking.service_type,
+      service_mode: day.service_mode || booking.service_mode,
+      region: day.region || booking.region,
+      subRegion: day.subRegion || booking.subRegion,
+      
+      // Bride services
+      bride_service: day.bride_service,
+      needs_trial: day.needs_trial,
+      trial_service: day.trial_service,
+      needs_jewelry: day.needs_jewelry,
+      needs_extensions: day.needs_extensions,
+      needs_saree_draping: day.needs_saree_draping,
+      needs_hijab_setting: day.needs_hijab_setting,
+      
+      // Party members
+      has_party_members: day.has_party_members,
+      party_both_count: day.party_both_count,
+      party_makeup_count: day.party_makeup_count,
+      party_hair_count: day.party_hair_count,
+      party_dupatta_count: day.party_dupatta_count,
+      party_extensions_count: day.party_extensions_count,
+      party_saree_draping_count: day.party_saree_draping_count,
+      party_hijab_setting_count: day.party_hijab_setting_count,
+      airbrush_count: day.airbrush_count,
+      
+      // Non-bridal
+      non_bridal_count: day.non_bridal_count,
+      non_bridal_everyone_both: day.non_bridal_everyone_both,
+      non_bridal_both_count: day.non_bridal_both_count,
+      non_bridal_makeup_count: day.non_bridal_makeup_count,
+      non_bridal_hair_count: day.non_bridal_hair_count,
+      non_bridal_jewelry_count: day.non_bridal_jewelry_count,
+      non_bridal_extensions_count: day.non_bridal_extensions_count,
+      non_bridal_airbrush_count: day.non_bridal_airbrush_count,
+      non_bridal_saree_draping_count: day.non_bridal_saree_draping_count,
+      non_bridal_hijab_setting_count: day.non_bridal_hijab_setting_count,
+    };
+
+    // Calculate pricing for this day
+    const dayPricing = calculateBookingPrice(dayBooking, artist);
+    
+    if (dayPricing) {
+      totalSubtotal += dayPricing.subtotal;
+      
+      // Add day-specific services to the list
+      const dayLabel = day.event_name || `Day ${index + 1}`;
+      const dayDate = day.event_date ? ` (${new Date(day.event_date).toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      })})` : '';
+      
+      allServices.push(`--- ${dayLabel}${dayDate} ---`);
+      
+      // Add each service from this day (excluding summary lines)
+      dayPricing.services.forEach(service => {
+        if (!service.startsWith('Subtotal') && 
+            !service.startsWith('HST') && 
+            !service.startsWith('Total') && 
+            !service.startsWith('Deposit')) {
+          allServices.push(service);
+        }
+      });
+      
+      console.log(`✅ Day ${index + 1} subtotal:`, dayPricing.subtotal);
+    }
+  });
+
+  console.log("🔍 Total before discount:", totalSubtotal);
+
+  // Apply multi-day discount
+  const totalDays = booking.days.length;
+  const discountPercentage = getMultiDayDiscount(totalDays);
+  const discountAmount = (totalSubtotal * discountPercentage) / 100;
+  const subtotalAfterDiscount = totalSubtotal - discountAmount;
+
+  console.log(`🔍 Multi-day discount (${totalDays} days): ${discountPercentage}%`);
+  console.log("🔍 Discount amount:", discountAmount);
+  console.log("🔍 Subtotal after discount:", subtotalAfterDiscount);
+
+  // Calculate tax on discounted amount
+  const hst = subtotalAfterDiscount * PRICING.HST_RATE;
+  const total = subtotalAfterDiscount + hst;
+
+  // Calculate deposit
+  const isNonBridal = booking.service_type === "Non-Bridal";
+  const depositPercentage = isNonBridal
+    ? PRICING.DEPOSIT_PERCENTAGES.non_bridal
+    : PRICING.DEPOSIT_PERCENTAGES.bridal;
+  const deposit = total * depositPercentage;
+
+  // Add summary to services
+  allServices.push('');
+  allServices.push(`--- Multi-Day Summary ---`);
+  allServices.push(`Total Days: ${totalDays}`);
+  allServices.push(`Original Subtotal: $${totalSubtotal.toFixed(2)}`);
+  if (discountPercentage > 0) {
+    allServices.push(`Multi-Day Discount (${discountPercentage}%): -$${discountAmount.toFixed(2)}`);
+  }
+  allServices.push(`Subtotal After Discount: $${subtotalAfterDiscount.toFixed(2)}`);
+  allServices.push(`HST (13%): $${hst.toFixed(2)}`);
+  allServices.push(`Total: $${total.toFixed(2)} CAD`);
+  allServices.push(
+    `Deposit Required (${(depositPercentage * 100).toFixed(0)}%): $${deposit.toFixed(2)}`
+  );
+
+  return {
+    subtotal: subtotalAfterDiscount,
+    original_subtotal: totalSubtotal,
+    multi_day_discount: discountPercentage,
+    discount_amount: discountAmount,
+    hst: hst,
+    total: total,
+    deposit: deposit,
+    services: allServices,
+  };
+}
+
