@@ -372,14 +372,17 @@ export default function App() {
 
     const serviceType = getValues("service_type");
     const isMultiDay = getValues("is_multi_day");
+    const totalStepsCalculated = getTotalSteps();
+    
     console.log("Service type from form:", serviceType, "isMultiDay:", isMultiDay);
 
     // For single-day bookings, send email at step 10 (QuoteReview)
-    // For multi-day bookings, send email at step 12 (after all days completed)
-    const isQuoteReviewStep = (!isMultiDay && step === 10) || (isMultiDay && step === 12);
+    // For multi-day bookings, send email at the last step (which is quote review)
+    const isQuoteReviewStep = (!isMultiDay && step === 10) || (isMultiDay && step === totalStepsCalculated);
 
     console.log("Email check:", {
       step,
+      totalSteps: totalStepsCalculated,
       serviceType,
       isMultiDay,
       isQuoteReviewStep,
@@ -1254,7 +1257,8 @@ export default function App() {
     // This allows email to be sent again if user changes services and moves forward
     const currentStep = step;
     const isMultiDay = getValues("is_multi_day");
-    const isQuoteStep = (!isMultiDay && currentStep === 10) || (isMultiDay && currentStep === 12);
+    const totalStepsCalculated = getTotalSteps();
+    const isQuoteStep = (!isMultiDay && currentStep === 10) || (isMultiDay && currentStep === totalStepsCalculated);
     
     if (isQuoteStep && confirmationEmailSent) {
       console.log("Going back from quote review - resetting email flag");
