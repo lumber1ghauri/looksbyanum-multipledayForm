@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import StepLayout from './StepLayout';
-import { formatCurrency } from '../../lib/currencyFormat';
+import { formatCurrency } from '../../lib/formatCurrency';
 
 export default function MultiDayQuoteReview({ 
   quote, 
@@ -71,7 +71,7 @@ export default function MultiDayQuoteReview({
               <div>
                 <div className="text-sm text-green-600 font-medium">Subtotal</div>
                 <div className="text-2xl font-bold text-green-900">
-                  {currencyFormat(subtotal)}
+                  {formatCurrency(subtotal)}
                 </div>
               </div>
             </div>
@@ -86,7 +86,7 @@ export default function MultiDayQuoteReview({
                     Multi-Day Discount ({discount}%)
                   </div>
                   <div className="text-2xl font-bold text-purple-900">
-                    -{currencyFormat(discountAmount)}
+                    -{formatCurrency(discountAmount)}
                   </div>
                 </div>
               </div>
@@ -145,7 +145,7 @@ export default function MultiDayQuoteReview({
                       <div className="flex items-center gap-4">
                         <div className="text-right">
                           <div className="text-xl font-bold text-gray-900">
-                            {currencyFormat(dayTotal)}
+                            {formatCurrency(dayTotal)}
                           </div>
                         </div>
 
@@ -196,7 +196,7 @@ export default function MultiDayQuoteReview({
                                     {dayData.bride_makeup_type} Makeup
                                   </span>
                                   <span className="font-medium text-gray-900">
-                                    {currencyFormat(dayData.bride_makeup_price || 0)}
+                                    {formatCurrency(dayData.bride_makeup_price || 0)}
                                   </span>
                                 </div>
                               )}
@@ -206,7 +206,7 @@ export default function MultiDayQuoteReview({
                                     {dayData.bride_hair_type} Hair
                                   </span>
                                   <span className="font-medium text-gray-900">
-                                    {currencyFormat(dayData.bride_hair_price || 0)}
+                                    {formatCurrency(dayData.bride_hair_price || 0)}
                                   </span>
                                 </div>
                               )}
@@ -225,7 +225,7 @@ export default function MultiDayQuoteReview({
                                 {dayData.party_size} member{dayData.party_size > 1 ? 's' : ''}
                               </span>
                               <span className="font-medium text-gray-900">
-                                {currencyFormat(dayData.party_total || 0)}
+                                {formatCurrency(dayData.party_total || 0)}
                               </span>
                             </div>
                           </div>
@@ -242,7 +242,7 @@ export default function MultiDayQuoteReview({
                                 <div className="flex justify-between text-sm">
                                   <span className="text-gray-600">Bride Add-ons</span>
                                   <span className="font-medium text-gray-900">
-                                    {currencyFormat(dayData.bride_addons_total)}
+                                    {formatCurrency(dayData.bride_addons_total)}
                                   </span>
                                 </div>
                               )}
@@ -250,7 +250,7 @@ export default function MultiDayQuoteReview({
                                 <div className="flex justify-between text-sm">
                                   <span className="text-gray-600">Party Add-ons</span>
                                   <span className="font-medium text-gray-900">
-                                    {currencyFormat(dayData.party_addons_total)}
+                                    {formatCurrency(dayData.party_addons_total)}
                                   </span>
                                 </div>
                               )}
@@ -265,7 +265,7 @@ export default function MultiDayQuoteReview({
                               Day {dayIndex + 1} Subtotal
                             </span>
                             <span className="text-sm font-bold text-gray-900">
-                              {currencyFormat(dayTotal)}
+                              {formatCurrency(dayTotal)}
                             </span>
                           </div>
                         </div>
@@ -284,7 +284,7 @@ export default function MultiDayQuoteReview({
             <div className="flex justify-between text-base">
               <span className="text-gray-600">Subtotal ({totalDays} days)</span>
               <span className="font-semibold text-gray-900">
-                {currencyFormat(subtotal)}
+                {formatCurrency(subtotal)}
               </span>
             </div>
 
@@ -294,7 +294,7 @@ export default function MultiDayQuoteReview({
                   Multi-Day Discount ({discount}%)
                 </span>
                 <span className="font-semibold text-green-600">
-                  -{currencyFormat(discountAmount)}
+                  -{formatCurrency(discountAmount)}
                 </span>
               </div>
             )}
@@ -303,7 +303,7 @@ export default function MultiDayQuoteReview({
               <div className="flex justify-between items-center">
                 <span className="text-xl font-bold text-gray-900">Grand Total</span>
                 <span className="text-3xl font-bold text-gray-900">
-                  {currencyFormat(total)}
+                  {formatCurrency(total)}
                 </span>
               </div>
             </div>
@@ -319,7 +319,7 @@ export default function MultiDayQuoteReview({
               </svg>
               <div className="flex-1">
                 <h4 className="text-sm font-semibold text-green-900 mb-1">
-                  🎉 You're saving {currencyFormat(discountAmount)}!
+                  🎉 You're saving {formatCurrency(discountAmount)}!
                 </h4>
                 <p className="text-sm text-green-800">
                   Your {discount}% multi-day discount has been applied. Thank you for choosing us for your multi-day event!

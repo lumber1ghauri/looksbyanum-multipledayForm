@@ -375,8 +375,8 @@ export default function App() {
     console.log("Service type from form:", serviceType, "isMultiDay:", isMultiDay);
 
     // For single-day bookings, send email at step 10 (QuoteReview)
-    // For multi-day bookings, different logic applies
-    const isQuoteReviewStep = !isMultiDay && step === 10;
+    // For multi-day bookings, send email at step 12 (after all days completed)
+    const isQuoteReviewStep = (!isMultiDay && step === 10) || (isMultiDay && step === 12);
 
     console.log("Email check:", {
       step,
