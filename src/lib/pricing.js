@@ -845,23 +845,32 @@ function calculateMultiDayBookingPrice(booking, artist = "Team") {
     if (dayPricing) {
       totalSubtotal += dayPricing.subtotal;
       
-      // Add day-specific services to the list
+      // Add day-specific services to the list as structured objects
       const dayLabel = day.event_name || `Day ${index + 1}`;
-      const dayDate = day.event_date ? ` (${new Date(day.event_date).toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric'
-      })})` : '';
+      const dayDate = day.event_date;
       
-      allServices.push(`--- ${dayLabel}${dayDate} ---`);
-      
-      // Add each service from this day (excluding summary lines)
+      // Parse each service string and convert to object
       dayPricing.services.forEach(service => {
         if (!service.startsWith('Subtotal') && 
             !service.startsWith('HST') && 
             !service.startsWith('Total') && 
-            !service.startsWith('Deposit')) {
-          allServices.push(service);
+            !service.startsWith('Deposit') &&
+            !service.startsWith('Travel Fee')) {
+          
+          // Parse service string to extract name and price
+          // Format: "Service Name x Count: $Price" or "Service Name: $Price"
+          const priceMatch = service.match(/\$?([\d,]+\.?\d*)/);
+          const price = priceMatch ? parseFloat(priceMatch[1].replace(/,/g, '')) : 0;
+          
+          // Remove the price part to get the service name
+          const name = service.replace(/:\s*\$?[\d,]+\.?\d*$/, '').trim();
+          
+          allServices.push({
+            name: name,
+            price: price,
+            day: dayLabel,
+            date: dayDate,
+          });
         }
       });
       
@@ -892,20 +901,7 @@ function calculateMultiDayBookingPrice(booking, artist = "Team") {
     : PRICING.DEPOSIT_PERCENTAGES.bridal;
   const deposit = total * depositPercentage;
 
-  // Add summary to services
-  allServices.push('');
-  allServices.push(`--- Multi-Day Summary ---`);
-  allServices.push(`Total Days: ${totalDays}`);
-  allServices.push(`Original Subtotal: $${totalSubtotal.toFixed(2)}`);
-  if (discountPercentage > 0) {
-    allServices.push(`Multi-Day Discount (${discountPercentage}%): -$${discountAmount.toFixed(2)}`);
-  }
-  allServices.push(`Subtotal After Discount: $${subtotalAfterDiscount.toFixed(2)}`);
-  allServices.push(`HST (13%): $${hst.toFixed(2)}`);
-  allServices.push(`Total: $${total.toFixed(2)} CAD`);
-  allServices.push(
-    `Deposit Required (${(depositPercentage * 100).toFixed(0)}%): $${deposit.toFixed(2)}`
-  );
+  console.log(`✅ Multi-day pricing complete - ${allServices.length} services across ${totalDays} days`);
 
   return {
     subtotal: subtotalAfterDiscount,
@@ -915,7 +911,7 @@ function calculateMultiDayBookingPrice(booking, artist = "Team") {
     hst: hst,
     total: total,
     deposit: deposit,
-    services: allServices,
+    services: allServices, // Array of service objects with {name, price, day, date}
   };
 }
 
