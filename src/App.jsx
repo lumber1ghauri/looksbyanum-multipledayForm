@@ -596,6 +596,7 @@ export default function App() {
           ready_time: '',
         }));
         setDaysData(emptyDays);
+        setValue("days", emptyDays); // Sync to form
         
         console.log(`Multi-day booking initialized: ${selectedTotalDays} days`);
       } else {
@@ -642,6 +643,10 @@ export default function App() {
             day_number: dayNumber + 1,
           };
           setDaysData(updatedDays);
+          
+          // Sync days data to form
+          setValue("days", updatedDays);
+          
           console.log(`Saved data for Day ${dayNumber + 1}:`, updatedDays[dayNumber]);
         }
         
