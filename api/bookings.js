@@ -25,7 +25,7 @@ export default async function handler(req, res) {
       const bookingData = req.body;
       
       // Generate unique booking ID
-      const bookingId = `B${Date.now()}${Math.random().toString(36).substr(2, 9)}`;
+      const bookingId = `BK-${Date.now()}${Math.random().toString(36).substr(2, 9)}`;
       bookingData.unique_id = bookingId;
       bookingData.booking_id = bookingId;
       bookingData.created_at = new Date().toISOString();
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
       // Add to bookings list
       await kv.lpush('bookings:all', bookingId);
       
-      console.log('Booking created:', bookingId);
+      console.log('✅ Booking created:', bookingId);
       
       return res.status(201).json({
         success: true,
@@ -101,6 +101,8 @@ export default async function handler(req, res) {
       
       await kv.set(`booking:${id}`, JSON.stringify(updatedData));
       
+      console.log('✅ Booking updated:', id);
+      
       return res.status(200).json({
         success: true,
         booking_id: id,
@@ -113,10 +115,13 @@ export default async function handler(req, res) {
       error: 'Method not allowed',
     });
   } catch (error) {
-    console.error('Bookings API Error:', error);
+    console.error('❌ Bookings API Error:', error);
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
     return res.status(500).json({
       success: false,
       error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
     });
   }
 }
