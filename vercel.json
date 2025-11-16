@@ -5,16 +5,16 @@
   "ignoreCommand": "git diff --quiet HEAD^ HEAD .",
   "rewrites": [
     {
+      "source": "/api/bookings/send-confirmation",
+      "destination": "/api/send-confirmation"
+    },
+    {
       "source": "/api/bookings/:path*",
       "destination": "/api/bookings"
     },
     {
       "source": "/api/quote",
       "destination": "/api/quote"
-    },
-    {
-      "source": "/api/bookings/send-confirmation",
-      "destination": "/api/send-confirmation"
     },
     {
       "source": "/(.*)",
