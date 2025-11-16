@@ -973,16 +973,68 @@ export default function App() {
           days: daysData,
         };
         try {
-          // Use regular /quote endpoint with multi-day data
-          // Backend should detect is_multi_day flag and handle accordingly
-          quoteResponse = await api.post("/quote", multiDayQuoteData);
-          console.log("🔍 Frontend: Multi-day quote response:", quoteResponse.data);
-          setQuote(quoteResponse.data);
-          setValue("pricing.quote_total", quoteResponse.data.quote_total);
-          setValue("pricing.deposit_amount", quoteResponse.data.deposit_amount);
-          setValue("pricing.remaining_amount", quoteResponse.data.remaining_amount);
-          if (quoteResponse.data.multi_day_discount) {
-            setValue("multi_day_discount", quoteResponse.data.multi_day_discount);
+          // Import pricing calculation function
+          const { calculateBookingPrice } = await import('./lib/pricing.js');
+          
+          console.log("🔍 Calculating both pricing packages (Lead and Team) for multi-day...");
+          
+          // Calculate with Lead artist (Anum)
+          const leadPricing = calculateBookingPrice(multiDayQuoteData, 'Lead');
+          console.log("🔍 Multi-day Lead (Anum) pricing:", leadPricing);
+          
+          // Calculate with Team artist
+          const teamPricing = calculateBookingPrice(multiDayQuoteData, 'Team');
+          console.log("🔍 Multi-day Team pricing:", teamPricing);
+          
+          // Create package objects for both options
+          const packages = {
+            lead: leadPricing ? {
+              subtotal: leadPricing.subtotal,
+              travel_fee: 0,
+              early_fee: 0,
+              subtotal_with_fees: leadPricing.subtotal,
+              gst: leadPricing.hst,
+              pst: 0,
+              total_tax: leadPricing.hst,
+              quote_total: leadPricing.total,
+              deposit_amount: leadPricing.deposit,
+              remaining_amount: leadPricing.total - leadPricing.deposit,
+              services: leadPricing.services,
+              artist: 'Lead',
+              artist_name: 'Anum (Lead Artist)',
+              multi_day_discount: leadPricing.multi_day_discount || 0,
+            } : null,
+            team: teamPricing ? {
+              subtotal: teamPricing.subtotal,
+              travel_fee: 0,
+              early_fee: 0,
+              subtotal_with_fees: teamPricing.subtotal,
+              gst: teamPricing.hst,
+              pst: 0,
+              total_tax: teamPricing.hst,
+              quote_total: teamPricing.total,
+              deposit_amount: teamPricing.deposit,
+              remaining_amount: teamPricing.total - teamPricing.deposit,
+              services: teamPricing.services,
+              artist: 'Team',
+              artist_name: 'Team Artist',
+              multi_day_discount: teamPricing.multi_day_discount || 0,
+            } : null,
+          };
+          
+          console.log("✅ Both multi-day packages calculated:", packages);
+          
+          // Store both packages in quote state
+          setQuote(packages);
+          
+          // Use Team pricing as default for form values
+          if (teamPricing) {
+            setValue("pricing.quote_total", teamPricing.total);
+            setValue("pricing.deposit_amount", teamPricing.deposit);
+            setValue("pricing.remaining_amount", teamPricing.total - teamPricing.deposit);
+            if (teamPricing.multi_day_discount) {
+              setValue("multi_day_discount", teamPricing.multi_day_discount);
+            }
           }
         } catch (error) {
           console.error("Failed to generate multi-day quote:", error);
