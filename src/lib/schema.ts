@@ -324,7 +324,12 @@ export const BookingSchema = z
   })
   .refine(
     (data) => {
-      // Conditional validation based on region
+      // Skip validation for multi-day bookings (they use days array instead)
+      if (data.is_multi_day) {
+        return true; // Multi-day bookings are validated separately
+      }
+      
+      // Conditional validation based on region for single-day bookings
       if (data.region === "Destination Wedding") {
         // For destination weddings, require start and end dates
         return (
