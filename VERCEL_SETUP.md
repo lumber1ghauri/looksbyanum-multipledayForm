@@ -14,7 +14,7 @@ The 500 error you're seeing is because **Vercel KV database is not set up yet**.
 
 ### 1.2 Create KV Database
 1. Click **Create Database**
-2. Select **KV** (Key-Value Store)
+2. Select **Redis** (this is Vercel's KV - Key-Value Store)
 3. Give it a name: `looksbyanum-bookings-db`
 4. Click **Create**
 

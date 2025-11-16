@@ -1,5 +1,5 @@
 // Vercel Serverless Function for Booking Management
-import { kv } from '@vercel/kv';
+import { createClient } from 'redis';
 
 // Enable CORS
 const corsHeaders = {
@@ -7,6 +7,23 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
+
+// Create Redis client
+let redisClient = null;
+
+async function getRedisClient() {
+  if (!redisClient) {
+    redisClient = createClient({
+      url: process.env.REDIS_URL,
+    });
+    
+    redisClient.on('error', (err) => console.error('Redis Client Error:', err));
+    
+    await redisClient.connect();
+    console.log('✅ Redis connected successfully');
+  }
+  return redisClient;
+}
 
 export default async function handler(req, res) {
   // Handle CORS preflight
@@ -31,11 +48,14 @@ export default async function handler(req, res) {
       bookingData.created_at = new Date().toISOString();
       bookingData.updated_at = new Date().toISOString();
       
-      // Store in Vercel KV (key-value store)
-      await kv.set(`booking:${bookingId}`, JSON.stringify(bookingData));
+      // Get Redis client
+      const client = await getRedisClient();
+      
+      // Store in Redis
+      await client.set(`booking:${bookingId}`, JSON.stringify(bookingData));
       
       // Add to bookings list
-      await kv.lpush('bookings:all', bookingId);
+      await client.lPush('bookings:all', bookingId);
       
       console.log('✅ Booking created:', bookingId);
       
@@ -50,9 +70,10 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       // Get booking by ID
       const { id } = req.query;
+      const client = await getRedisClient();
       
       if (id) {
-        const booking = await kv.get(`booking:${id}`);
+        const booking = await client.get(`booking:${id}`);
         if (!booking) {
           return res.status(404).json({
             success: false,
@@ -60,18 +81,18 @@ export default async function handler(req, res) {
           });
         }
         
-        const bookingData = typeof booking === 'string' ? JSON.parse(booking) : booking;
+        const bookingData = JSON.parse(booking);
         return res.status(200).json(bookingData);
       }
       
       // Get all bookings
-      const bookingIds = await kv.lrange('bookings:all', 0, -1);
+      const bookingIds = await client.lRange('bookings:all', 0, -1);
       const bookings = [];
       
       for (const id of bookingIds) {
-        const booking = await kv.get(`booking:${id}`);
+        const booking = await client.get(`booking:${id}`);
         if (booking) {
-          const bookingData = typeof booking === 'string' ? JSON.parse(booking) : booking;
+          const bookingData = JSON.parse(booking);
           bookings.push(bookingData);
         }
       }
@@ -83,8 +104,9 @@ export default async function handler(req, res) {
       // Update booking
       const { id } = req.query;
       const updateData = req.body;
+      const client = await getRedisClient();
       
-      const existing = await kv.get(`booking:${id}`);
+      const existing = await client.get(`booking:${id}`);
       if (!existing) {
         return res.status(404).json({
           success: false,
@@ -92,14 +114,14 @@ export default async function handler(req, res) {
         });
       }
       
-      const existingData = typeof existing === 'string' ? JSON.parse(existing) : existing;
+      const existingData = JSON.parse(existing);
       const updatedData = {
         ...existingData,
         ...updateData,
         updated_at: new Date().toISOString(),
       };
       
-      await kv.set(`booking:${id}`, JSON.stringify(updatedData));
+      await client.set(`booking:${id}`, JSON.stringify(updatedData));
       
       console.log('✅ Booking updated:', id);
       
