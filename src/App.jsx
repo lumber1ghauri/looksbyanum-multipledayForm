@@ -384,9 +384,12 @@ export default function App() {
       isMultiDay,
       isQuoteReviewStep,
       confirmationEmailSent,
+      hasQuote: !!quote,
+      quoteLead: !!quote?.lead,
+      quoteTeam: !!quote?.team,
     });
 
-    if (isQuoteReviewStep && !confirmationEmailSent) {
+    if (isQuoteReviewStep && !confirmationEmailSent && quote) {
       const bookingData = getValues();
 
       console.log("Quote review step reached, checking data:", {
@@ -396,19 +399,25 @@ export default function App() {
         email: bookingData.email,
         firstName: bookingData.first_name,
         lastName: bookingData.last_name,
+        hasQuoteLead: !!quote?.lead,
+        hasQuoteTeam: !!quote?.team,
       });
 
       // Check if we have minimum required data for email
       const hasEmail = !!bookingData.email;
       const hasFirstName = !!bookingData.first_name?.trim();
       const hasLastName = !!bookingData.last_name?.trim();
+      const hasQuoteData = quote?.lead || quote?.team;
 
-      if (hasEmail && hasFirstName && hasLastName) {
-        console.log("Sending booking confirmation email...", {
+      if (hasEmail && hasFirstName && hasLastName && hasQuoteData) {
+        console.log("✅ All conditions met - Sending booking confirmation email...", {
           email: bookingData.email,
           name: `${bookingData.first_name} ${bookingData.last_name}`,
           service_type: bookingData.service_type,
           booking_id: bookingData.booking_id,
+          isMultiDay: isMultiDay,
+          leadQuoteTotal: quote?.lead?.quote_total,
+          teamQuoteTotal: quote?.team?.quote_total,
         });
 
         // Send confirmation email with quote data
@@ -423,7 +432,7 @@ export default function App() {
           .post("/bookings/send-confirmation", emailPayload)
           .then((response) => {
             console.log(
-              "Booking confirmation email sent successfully:",
+              "✅ Booking confirmation email sent successfully:",
               response.data
             );
             setConfirmationEmailSent(true);
@@ -433,7 +442,8 @@ export default function App() {
             );
           })
           .catch((error) => {
-            console.error("Failed to send confirmation email:", error);
+            console.error("❌ Failed to send confirmation email:", error);
+            console.error("❌ Error details:", error.response?.data);
             window.showToast(
               "Failed to send confirmation email. Please try again.",
               "error"
@@ -442,11 +452,17 @@ export default function App() {
           });
       } else {
         console.log(
-          "Missing required data for email - will retry when data is available"
+          "⚠️ Missing required data for email - will retry when data is available:",
+          {
+            hasEmail,
+            hasFirstName,
+            hasLastName,
+            hasQuoteData,
+          }
         );
       }
     }
-  }, [step, confirmationEmailSent]);
+  }, [step, confirmationEmailSent, quote]);
 
   const getStepTitle = () => {
     const serviceType = getValues("service_type");
